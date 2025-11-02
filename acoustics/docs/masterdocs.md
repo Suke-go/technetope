@@ -205,6 +205,13 @@
 4. **本番スケール検証**: 30台前提のシナリオをリハーサルし、遅延・ドロップ・復旧手順を訓練。
 5. **ローンチ準備**: 最終手順書（セットアップ／運用／エスカレーション）を`process/`配下にまとめ、関係者へ周知。
 
+#### GUI Design Snapshot
+- 詳細は `docs/gui_spec.md` を参照。Dear ImGui を用い、最大約100台のデバイスをタイル表示（20台ごとに列分割、ページング付き）。
+- `DeviceRegistry` スナップショットを500ms間隔で取得し、通信状態をLED色（正常/警告/致命）とログで可視化。Heartbeat異常のみイベントログに記録。
+- デバイスAliasは `state/device_aliases.json` に永続化し、GUIからリネーム可能。変更後は Monitor / CLI とも整合する。
+- 右ペインでタイムライン送出・OSCコマンドをまとめ、選択したデバイスへ `/preset/play` バンドルを送れるようにする。
+- エラー・送信結果・Ping応答などをイベントログ（スクロールビュー）に蓄積し、フィルタで検索可能にする。
+
 ### エージェント向け作業指示書
 - **Agent A (OSC/PCシーケンサ担当)**: `acoustics/agents/agent_A/README.md`
 - **Agent B (M5StickC Plus2ファームウェア担当)**: `acoustics/agents/agent_B/README.md`
