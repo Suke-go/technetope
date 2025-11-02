@@ -38,6 +38,9 @@ compile_commands.json
 .piolibdeps/
 libdeps/
 
+# Firmware secrets (local only)
+acoustics/firmware/include/Secrets.h
+
 # IDE settings
 .idea/
 .vscode/
