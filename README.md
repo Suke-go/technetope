@@ -1,4 +1,5 @@
 <h1>Technetope(テクネトープ)</h1>
+＜画像＞
  <h2>Artist Profile</h2>
  Junpei <B>SAITO</B>, Kosuke <B>SHIMIZU</B>, Tsubasa <B>SATO</B>
  <h2>Theme</h2>
