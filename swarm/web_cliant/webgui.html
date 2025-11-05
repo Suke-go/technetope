@@ -39,6 +39,49 @@
             display: flex;
             flex-direction: column;
         }
+        .cube-list {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: space-between;
+        }
+        .cube-card {
+            flex: 1 1 220px;
+            border: 1px solid #e3e7f1;
+            border-radius: 8px;
+            padding: 12px;
+            background-color: #fdfdff;
+        }
+        .cube-card h3 {
+            margin: 0 0 8px;
+            font-size: 16px;
+            color: #1f2b46;
+        }
+        .cube-card input {
+            width: 100%;
+            padding: 8px;
+            font-size: 15px;
+        }
+        .button-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .active-slot-selector {
+            margin-top: 15px;
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .active-slot-selector label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #1f2b46;
+        }
         .panel-field {
             flex: 0 0 440px;
             min-width: 320px;
@@ -166,6 +209,29 @@
             margin: 5px 0;
             font-family: monospace;
         }
+        .cube-info {
+            border: 1px solid #e3e7f1;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background-color: #fefeff;
+        }
+        .cube-info h3 {
+            margin: 0 0 10px;
+            color: #1f2b46;
+        }
+        .cube-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+            justify-content: center;
+        }
+        .cube-actions .button {
+            width: 140px;
+            margin: 0;
+            height: 44px;
+        }
         .console {
             margin-top: 30px;
             padding: 10px;
@@ -196,15 +262,38 @@
         <h1>Toio Cube Controller</h1>
         <div class="controller-layout">
             <div class="panel panel-control">
-                <div class="input-container">
-                    <input type="text" id="toio-id" placeholder="Enter Toio ID (e.g., 685)">
-                    <button class="button" id="connect">Connect</button>
-                    <button class="button" id="disconnect">Disconnect</button>
+                <div class="cube-list">
+                    <div class="cube-card">
+                        <h3>Cube A</h3>
+                        <input type="text" id="toio-id-a" placeholder="Enter Toio ID (e.g., 685)">
+                        <div class="button-row">
+                            <button class="button connect-btn" data-slot="a">Connect</button>
+                            <button class="button disconnect-btn" data-slot="a">Disconnect</button>
+                        </div>
+                    </div>
+                    <div class="cube-card">
+                        <h3>Cube B</h3>
+                        <input type="text" id="toio-id-b" placeholder="Enter Toio ID (e.g., 686)">
+                        <div class="button-row">
+                            <button class="button connect-btn" data-slot="b">Connect</button>
+                            <button class="button disconnect-btn" data-slot="b">Disconnect</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="input-container checkbox-row">
                     <label class="checkbox-label">
                         <input type="checkbox" id="require-result" checked>
-                        <span>Require result response</span>
+                        <span>Require result response (both cubes)</span>
+                    </label>
+                </div>
+                <div class="active-slot-selector">
+                    <label>
+                        <input type="radio" name="active-slot" value="a" checked>
+                        Drive / LED: Cube A
+                    </label>
+                    <label>
+                        <input type="radio" name="active-slot" value="b">
+                        Drive / LED: Cube B
                     </label>
                 </div>
                 <div class="joystick-wrapper">
@@ -217,14 +306,6 @@
                         <button class="button" id="stop">Stop</button>
                     </div>
                 </div>
-            </div>
-            <div class="panel panel-info">
-                <div class="input-container">
-                    <button class="button" id="battery">Get Battery</button>
-                    <button class="button" id="position-once">Get Position Once</button>
-                    <button class="button" id="position-subscribe">Subscribe Position</button>
-                    <button class="button" id="position-unsubscribe">Stop Position Updates</button>
-                </div>
                 <div class="slider-container">
                     <label for="red-slider">Red:</label>
                     <input type="range" id="red-slider" class="slider" min="0" max="255" value="255">
@@ -234,10 +315,35 @@
                     <input type="range" id="blue-slider" class="slider" min="0" max="255" value="0">
                     <button class="button" id="set-led">Set LED</button>
                 </div>
-                <div class="status-card">
-                    <p id="battery-status">Battery: --%</p>
-                    <p id="position-status">Position: (--, --) angle --° on_mat: --</p>
-                    <p id="subscription-status">Position updates: not subscribed</p>
+            </div>
+            <div class="panel panel-info">
+                <div class="cube-info" data-slot="a">
+                    <h3>Cube A Status</h3>
+                    <div class="cube-actions">
+                        <button class="button battery-btn" data-slot="a">Get Battery</button>
+                        <button class="button position-once-btn" data-slot="a">Get Position Once</button>
+                        <button class="button position-sub-btn" data-slot="a">Subscribe Position</button>
+                        <button class="button position-unsub-btn" data-slot="a">Stop Position Updates</button>
+                    </div>
+                    <div class="status-card">
+                        <p id="battery-status-a">Battery: --%</p>
+                        <p id="position-status-a">Position: (--, --) angle --° on_mat: --</p>
+                        <p id="subscription-status-a">Position updates: not subscribed</p>
+                    </div>
+                </div>
+                <div class="cube-info" data-slot="b">
+                    <h3>Cube B Status</h3>
+                    <div class="cube-actions">
+                        <button class="button battery-btn" data-slot="b">Get Battery</button>
+                        <button class="button position-once-btn" data-slot="b">Get Position Once</button>
+                        <button class="button position-sub-btn" data-slot="b">Subscribe Position</button>
+                        <button class="button position-unsub-btn" data-slot="b">Stop Position Updates</button>
+                    </div>
+                    <div class="status-card">
+                        <p id="battery-status-b">Battery: --%</p>
+                        <p id="position-status-b">Position: (--, --) angle --° on_mat: --</p>
+                        <p id="subscription-status-b">Position updates: not subscribed</p>
+                    </div>
                 </div>
             </div>
             <div class="panel panel-field">
@@ -258,10 +364,6 @@
         const ws = new WebSocket("ws://localhost:8765/ws");
         const consoleElement = document.getElementById("console");
         const requireResultCheckbox = document.getElementById("require-result");
-        const batteryStatus = document.getElementById("battery-status");
-        const positionStatus = document.getElementById("position-status");
-        const subscriptionStatus = document.getElementById("subscription-status");
-        let positionSubscribed = false;
         const fieldCanvas = document.getElementById("field-canvas");
         const fieldHint = document.getElementById("field-hint");
         const fieldCtx = fieldCanvas ? fieldCanvas.getContext("2d") : null;
@@ -272,7 +374,27 @@
         const TOIO_WIDTH_MM = 32;
         const TOIO_LENGTH_MM = 71;
         const TOIO_DISPLAY_SCALE = 0.8;
+        const DEFAULT_CUBE_COLOR = { r: 111, g: 164, b: 255 };
         const fieldState = { cubes: {} };
+        const cubeColors = {};
+        const slots = ["a", "b"];
+        const slotLabels = { a: "Cube A", b: "Cube B" };
+        const batteryStatusEls = {
+            a: document.getElementById("battery-status-a"),
+            b: document.getElementById("battery-status-b")
+        };
+        const positionStatusEls = {
+            a: document.getElementById("position-status-a"),
+            b: document.getElementById("position-status-b")
+        };
+        const subscriptionStatusEls = {
+            a: document.getElementById("subscription-status-a"),
+            b: document.getElementById("subscription-status-b")
+        };
+        const positionSubscribed = { a: false, b: false };
+        let activeControlSlot = "a";
+        let joystickControlSlot = null;
+        let ledControlSlot = null;
 
         function logToConsole(message) {
             const timestamp = new Date().toLocaleTimeString();
@@ -290,16 +412,15 @@
             return true;
         }
 
-        function getToioId(options = {}) {
+        function getToioId(slot, options = {}) {
             const { silent = false } = options;
-            const toioId = document.getElementById("toio-id").value.trim();
-            if (!toioId) {
-                if (!silent) {
-                    logToConsole("Please enter a Toio ID.");
-                }
-                return null;
+            const input = document.getElementById(`toio-id-${slot}`);
+            if (!input) return null;
+            const toioId = input.value.trim();
+            if (!toioId && !silent) {
+                logToConsole(`${slotLabels[slot]} のIDを入力してください。`);
             }
-            return toioId;
+            return toioId || null;
         }
 
         function commandPayload(cmd, target, params = {}) {
@@ -336,9 +457,84 @@
             send(payload);
         }
 
-        ws.onopen = () => {
-            logToConsole("WebSocket connection established.");
-        };
+        function sendCommandForSlot(slot, cmd, params = {}) {
+            const toioId = getToioId(slot);
+            if (!toioId) return;
+            send(commandPayload(cmd, toioId, params));
+        }
+
+        function sendQueryForSlot(info, slot, notify) {
+            const toioId = getToioId(slot);
+            if (!toioId) return;
+            sendQuery(info, toioId, notify);
+        }
+
+        function findSlotByTarget(target) {
+            if (!target) return null;
+            return slots.find(slot => getToioId(slot, { silent: true }) === target) || null;
+        }
+
+        function updateBatteryStatus(slot, text) {
+            const el = batteryStatusEls[slot];
+            if (el) el.textContent = text;
+        }
+
+        function updatePositionStatus(slot, pos) {
+            const el = positionStatusEls[slot];
+            if (!el) return;
+            const x = pos?.x ?? "--";
+            const y = pos?.y ?? "--";
+            const angle = pos?.angle ?? "--";
+            const onMat = pos?.on_mat ?? "--";
+            el.textContent = `Position: (${x}, ${y}) angle ${angle}° on_mat: ${onMat}`;
+        }
+
+        function updateSubscriptionStatus(slot, notify, message) {
+            const el = subscriptionStatusEls[slot];
+            if (!el || typeof notify !== "boolean") return;
+            positionSubscribed[slot] = notify;
+            el.textContent = notify ? "Position updates: subscribed" : "Position updates: not subscribed";
+            if (!notify && message) {
+                logToConsole(`${slotLabels[slot]} subscription ended: ${message}`);
+            }
+        }
+
+        function pastelizeColor(color) {
+            const { r, g, b } = color ?? DEFAULT_CUBE_COLOR;
+            const pastel = {
+                r: Math.round((r + 255) / 2),
+                g: Math.round((g + 255) / 2),
+                b: Math.round((b + 255) / 2),
+            };
+            return pastel;
+        }
+
+        function colorToCss(color, alpha = 1) {
+            const { r, g, b } = color ?? DEFAULT_CUBE_COLOR;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function colorsEqual(a, b) {
+            if (!a || !b) return false;
+            return a.r === b.r && a.g === b.g && a.b === b.b;
+        }
+
+        function updateCubeColor(target, color) {
+            if (!target || !color) return;
+            if (colorsEqual(cubeColors[target], color)) return;
+            cubeColors[target] = color;
+            drawField();
+            const currentSlot = joystickControlSlot || activeControlSlot;
+            const currentTarget = getToioId(currentSlot, { silent: true });
+            if (currentTarget && currentTarget === target) {
+                updateJoystickColor();
+            }
+        }
+
+        function getSlotColor(slot) {
+            const target = getToioId(slot, { silent: true });
+            return (target && cubeColors[target]) || DEFAULT_CUBE_COLOR;
+        }
 
         function drawField() {
             if (!fieldCtx) return;
@@ -385,8 +581,10 @@
                 fieldCtx.save();
                 fieldCtx.translate(canvasX, canvasY);
                 fieldCtx.rotate(rad);
-                fieldCtx.fillStyle = on_mat ? "#6fa4ff" : "#b6c2d8";
-                fieldCtx.strokeStyle = "#2f4970";
+                const color = cubeColors[cubeId] || DEFAULT_CUBE_COLOR;
+                const fillAlpha = on_mat ? 0.9 : 0.55;
+                fieldCtx.fillStyle = colorToCss(color, fillAlpha);
+                fieldCtx.strokeStyle = colorToCss(color, 1);
                 fieldCtx.lineWidth = 2;
                 fieldCtx.fillRect(-rectLength / 2, -rectWidth / 2, rectLength, rectWidth);
                 fieldCtx.strokeRect(-rectLength / 2, -rectWidth / 2, rectLength, rectWidth);
@@ -416,32 +614,38 @@
 
         drawField();
 
+        ws.onopen = () => {
+            logToConsole("WebSocket connection established.");
+        };
+
         ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
             logToConsole(`Message from server: ${JSON.stringify(message)}`);
 
             if (message.type === "response") {
                 const payload = message.payload;
-                if (payload.info === "battery" && typeof payload.battery_level === "number") {
-                    batteryStatus.textContent = `Battery: ${payload.battery_level}%`;
-                }
-                if (payload.info === "position") {
-                    if (payload.position) {
-                        const pos = payload.position;
-                        positionStatus.textContent =
-                            `Position: (${pos.x ?? "--"}, ${pos.y ?? "--"}) angle ${pos.angle ?? "--"}° on_mat: ${pos.on_mat ?? "--"}`;
-                        if (payload.target) {
-                            updateFieldPosition(payload.target, pos);
+                if (payload.info === "battery") {
+                    const slot = findSlotByTarget(payload.target);
+                    if (slot) {
+                        if (typeof payload.battery_level === "number") {
+                            updateBatteryStatus(slot, `Battery: ${payload.battery_level}%`);
+                        } else {
+                            updateBatteryStatus(slot, `Battery: ${payload.message ?? "--"}`);
                         }
                     }
-                    if (typeof payload.notify === "boolean") {
-                        positionSubscribed = payload.notify;
-                        subscriptionStatus.textContent = positionSubscribed
-                            ? "Position updates: subscribed"
-                            : "Position updates: not subscribed";
-                        if (payload.message && !payload.notify) {
-                            logToConsole(`Position subscription ended: ${payload.message}`);
+                }
+                if (payload.info === "position") {
+                    const slot = findSlotByTarget(payload.target);
+                    if (payload.position) {
+                        if (slot) {
+                            updatePositionStatus(slot, payload.position);
                         }
+                        if (payload.target) {
+                            updateFieldPosition(payload.target, payload.position);
+                        }
+                    }
+                    if (slot && typeof payload.notify === "boolean") {
+                        updateSubscriptionStatus(slot, payload.notify, payload.message);
                     }
                 }
             }
@@ -449,35 +653,61 @@
 
         ws.onclose = () => {
             logToConsole("WebSocket connection closed.");
-            subscriptionStatus.textContent = "Position updates: disconnected";
+            slots.forEach(slot => {
+                if (subscriptionStatusEls[slot]) {
+                    subscriptionStatusEls[slot].textContent = "Position updates: disconnected";
+                }
+                positionSubscribed[slot] = false;
+            });
         };
 
         ws.onerror = (error) => {
             logToConsole(`WebSocket error: ${error}`);
         };
 
-        document.getElementById("connect").addEventListener("click", () => {
-            const toioId = getToioId();
-            if (!toioId) return;
-            send(commandPayload("connect", toioId));
+        document.querySelectorAll("input[name='active-slot']").forEach(radio => {
+            radio.addEventListener("change", (event) => {
+                if (event.target.checked) {
+                    activeControlSlot = event.target.value;
+                    if (!joystickControlSlot) {
+                        updateJoystickColor();
+                    }
+                }
+            });
         });
 
-        document.getElementById("disconnect").addEventListener("click", () => {
-            const toioId = getToioId();
-            if (!toioId) return;
-            send(commandPayload("disconnect", toioId));
+        document.querySelectorAll(".connect-btn").forEach(button => {
+            button.addEventListener("click", () => {
+                sendCommandForSlot(button.dataset.slot, "connect");
+            });
+        });
+
+        document.querySelectorAll(".disconnect-btn").forEach(button => {
+            button.addEventListener("click", () => {
+                sendCommandForSlot(button.dataset.slot, "disconnect");
+            });
         });
 
         const joystickArea = document.getElementById("joystick-area");
         const joystickHandle = document.getElementById("joystick-handle");
         const joystickStatus = document.getElementById("joystick-status");
         const motorStatus = document.getElementById("motor-status");
-        const MAX_JOYSTICK_RADIUS = 70; // px
+        const MAX_JOYSTICK_RADIUS = 70;
         const JOYSTICK_INTERVAL_MS = 120;
         const TURN_SCALE = 0.6;
         const joystickState = { active: false, x: 0, y: 0 };
         let joystickInterval = null;
         let activePointerId = null;
+
+        function updateJoystickColor() {
+            if (!joystickHandle) return;
+            const slot = joystickControlSlot || activeControlSlot;
+            const color = pastelizeColor(getSlotColor(slot));
+            joystickHandle.style.backgroundColor = colorToCss(color, 1);
+            joystickHandle.style.boxShadow = `0 4px 12px ${colorToCss(color, 0.45)}`;
+            joystickArea.style.border = `3px solid ${colorToCss(color, 0.35)}`;
+        }
+        updateJoystickColor();
 
         function clamp(value, min, max) {
             return Math.max(min, Math.min(max, value));
@@ -512,7 +742,8 @@
             if (joystickInterval) return;
             joystickInterval = setInterval(() => {
                 if (!joystickState.active) return;
-                const toioId = getToioId({ silent: true });
+                const slot = joystickControlSlot || activeControlSlot;
+                const toioId = getToioId(slot, { silent: true });
                 if (!toioId) return;
                 const forward = -joystickState.y;
                 const turn = joystickState.x;
@@ -521,7 +752,7 @@
                 const angular = turn * maxSpeed * TURN_SCALE;
                 const left = clamp(Math.round(linear + angular), -100, 100);
                 const right = clamp(Math.round(linear - angular), -100, 100);
-                motorStatus.textContent = `L: ${left} / R: ${right}`;
+                motorStatus.textContent = `${slotLabels[slot]} L: ${left} / R: ${right}`;
                 send(commandPayload("move", toioId, { left_speed: left, right_speed: right }));
             }, JOYSTICK_INTERVAL_MS);
         }
@@ -533,20 +764,24 @@
             }
             joystickState.active = false;
             activePointerId = null;
+            const slot = joystickControlSlot;
+            joystickControlSlot = null;
             resetJoystick();
+            updateJoystickColor();
             if (sendStop) {
-                sendStopCommand();
+                sendStopCommand({ slot });
             }
         }
 
         function sendStopCommand(options = {}) {
-            const { silent = true, log = false } = options;
-            const toioId = getToioId({ silent });
+            const { silent = true, log = false, slot = activeControlSlot } = options;
+            if (!slot) return;
+            const toioId = getToioId(slot, { silent });
             if (!toioId) return;
             send(commandPayload("move", toioId, { left_speed: 0, right_speed: 0 }));
-            motorStatus.textContent = "L: 0 / R: 0";
+            motorStatus.textContent = `${slotLabels[slot]} L: 0 / R: 0`;
             if (log) {
-                logToConsole(`Sent stop command for Toio ID: ${toioId}`);
+                logToConsole(`Sent stop command for ${slotLabels[slot]} (${toioId})`);
             }
         }
 
@@ -555,6 +790,8 @@
             joystickArea.setPointerCapture(event.pointerId);
             activePointerId = event.pointerId;
             joystickState.active = true;
+            joystickControlSlot = activeControlSlot;
+            updateJoystickColor();
             updateJoystickFromEvent(event);
             startJoystickLoop();
         });
@@ -572,7 +809,7 @@
                 try {
                     joystickArea.releasePointerCapture(event.pointerId);
                 } catch (err) {
-                    // ignore if capture already released
+                    // ignore
                 }
                 stopJoystickLoop(true);
             });
@@ -580,38 +817,40 @@
 
         document.getElementById("stop").addEventListener("click", () => {
             stopJoystickLoop(false);
-            sendStopCommand({ silent: false, log: true });
+            sendStopCommand({ silent: false, log: true, slot: activeControlSlot });
         });
 
-        document.getElementById("battery").addEventListener("click", () => {
-            const toioId = getToioId();
-            if (!toioId) return;
-            sendQuery("battery", toioId);
+        document.querySelectorAll(".battery-btn").forEach(button => {
+            button.addEventListener("click", () => {
+                sendQueryForSlot("battery", button.dataset.slot);
+            });
         });
 
-        document.getElementById("position-once").addEventListener("click", () => {
-            const toioId = getToioId();
-            if (!toioId) return;
-            sendQuery("position", toioId, false);
+        document.querySelectorAll(".position-once-btn").forEach(button => {
+            button.addEventListener("click", () => {
+                sendQueryForSlot("position", button.dataset.slot, false);
+            });
         });
 
-        document.getElementById("position-subscribe").addEventListener("click", () => {
-            const toioId = getToioId();
-            if (!toioId) return;
-            sendQuery("position", toioId, true);
+        document.querySelectorAll(".position-sub-btn").forEach(button => {
+            button.addEventListener("click", () => {
+                sendQueryForSlot("position", button.dataset.slot, true);
+            });
         });
 
-        document.getElementById("position-unsubscribe").addEventListener("click", () => {
-            const toioId = getToioId();
-            if (!toioId) return;
-            sendQuery("position", toioId, false);
+        document.querySelectorAll(".position-unsub-btn").forEach(button => {
+            button.addEventListener("click", () => {
+                sendQueryForSlot("position", button.dataset.slot, false);
+            });
         });
 
         let ledUpdateInterval;
-        const startLedUpdate = () => {
+        const startLedUpdate = (slot) => {
             if (ledUpdateInterval) return;
+            ledControlSlot = slot;
             ledUpdateInterval = setInterval(() => {
-                const toioId = getToioId({ silent: true });
+                const targetSlot = ledControlSlot || activeControlSlot;
+                const toioId = getToioId(targetSlot, { silent: true });
                 if (!toioId) {
                     stopLedUpdate();
                     return;
@@ -619,7 +858,9 @@
                 const red = parseInt(document.getElementById("red-slider").value, 10);
                 const green = parseInt(document.getElementById("green-slider").value, 10);
                 const blue = parseInt(document.getElementById("blue-slider").value, 10);
-                send(commandPayload("led", toioId, { r: red, g: green, b: blue }));
+                const colorPayload = { r: red, g: green, b: blue };
+                send(commandPayload("led", toioId, colorPayload));
+                updateCubeColor(toioId, colorPayload);
             }, 100);
         };
 
@@ -628,23 +869,29 @@
                 clearInterval(ledUpdateInterval);
                 ledUpdateInterval = null;
             }
+            ledControlSlot = null;
         };
 
         document.querySelectorAll(".slider").forEach(slider => {
-            slider.addEventListener("mousedown", startLedUpdate);
-            slider.addEventListener("touchstart", startLedUpdate);
+            slider.addEventListener("mousedown", () => startLedUpdate(activeControlSlot));
+            slider.addEventListener("touchstart", () => startLedUpdate(activeControlSlot));
             slider.addEventListener("mouseup", stopLedUpdate);
             slider.addEventListener("touchend", stopLedUpdate);
             slider.addEventListener("mouseleave", stopLedUpdate);
         });
+
         document.getElementById("set-led").addEventListener("click", () => {
-            const toioId = getToioId();
+            const slot = activeControlSlot;
+            const toioId = getToioId(slot);
             if (!toioId) return;
             const red = parseInt(document.getElementById("red-slider").value, 10);
             const green = parseInt(document.getElementById("green-slider").value, 10);
             const blue = parseInt(document.getElementById("blue-slider").value, 10);
-            send(commandPayload("led", toioId, { r: red, g: green, b: blue }));
+            const colorPayload = { r: red, g: green, b: blue };
+            send(commandPayload("led", toioId, colorPayload));
+            updateCubeColor(toioId, colorPayload);
         });
     </script>
+
 </body>
 </html>
