@@ -18,7 +18,23 @@
             align-items: center;
             justify-content: flex-start;
             min-height: 100vh;
-            padding-bottom: 40px;
+            padding: 20px 0 40px;
+        }
+        .controller-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            justify-content: center;
+            width: 90%;
+            max-width: 1100px;
+        }
+        .panel {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 20px;
+            flex: 1 1 340px;
+            min-width: 300px;
         }
         .button {
             width: 100px;
@@ -102,23 +118,23 @@
         .checkbox-label input[type="checkbox"] {
             margin: 0;
         }
-        .status-panel {
+        .status-card {
             margin-top: 20px;
-            padding: 10px 20px;
-            width: 80%;
-            background-color: #fff;
-            border-radius: 5px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 12px 16px;
+            background-color: #f9fafc;
+            border-radius: 6px;
+            border: 1px solid #e1e4ec;
             text-align: left;
         }
-        .status-panel p {
+        .status-card p {
             margin: 5px 0;
             font-family: monospace;
         }
         .console {
-            margin-top: 20px;
+            margin-top: 30px;
             padding: 10px;
-            width: 80%;
+            width: 90%;
+            max-width: 1100px;
             height: 200px;
             background-color: #333;
             color: #fff;
@@ -142,46 +158,52 @@
 <body>
     <div class="controller">
         <h1>Toio Cube Controller</h1>
-        <div class="input-container">
-            <input type="text" id="toio-id" placeholder="Enter Toio ID (e.g., 685)">
-            <button class="button" id="connect">Connect</button>
-            <button class="button" id="disconnect">Disconnect</button>
-        </div>
-        <div class="input-container checkbox-row">
-            <label class="checkbox-label">
-                <input type="checkbox" id="require-result" checked>
-                <span>Require result response</span>
-            </label>
-        </div>
-        <div class="joystick-wrapper">
-            <div class="joystick-area" id="joystick-area">
-                <div class="joystick-handle" id="joystick-handle"></div>
+        <div class="controller-layout">
+            <div class="panel panel-control">
+                <div class="input-container">
+                    <input type="text" id="toio-id" placeholder="Enter Toio ID (e.g., 685)">
+                    <button class="button" id="connect">Connect</button>
+                    <button class="button" id="disconnect">Disconnect</button>
+                </div>
+                <div class="input-container checkbox-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="require-result" checked>
+                        <span>Require result response</span>
+                    </label>
+                </div>
+                <div class="joystick-wrapper">
+                    <div class="joystick-area" id="joystick-area">
+                        <div class="joystick-handle" id="joystick-handle"></div>
+                    </div>
+                    <div class="joystick-info">
+                        <p id="joystick-status">Use the stick to drive</p>
+                        <p id="motor-status">L: 0 / R: 0</p>
+                        <button class="button" id="stop">Stop</button>
+                    </div>
+                </div>
             </div>
-            <div class="joystick-info">
-                <p id="joystick-status">Use the stick to drive</p>
-                <p id="motor-status">L: 0 / R: 0</p>
-                <button class="button" id="stop">Stop</button>
+            <div class="panel panel-info">
+                <div class="input-container">
+                    <button class="button" id="battery">Get Battery</button>
+                    <button class="button" id="position-once">Get Position Once</button>
+                    <button class="button" id="position-subscribe">Subscribe Position</button>
+                    <button class="button" id="position-unsubscribe">Stop Position Updates</button>
+                </div>
+                <div class="slider-container">
+                    <label for="red-slider">Red:</label>
+                    <input type="range" id="red-slider" class="slider" min="0" max="255" value="255">
+                    <label for="green-slider">Green:</label>
+                    <input type="range" id="green-slider" class="slider" min="0" max="255" value="0">
+                    <label for="blue-slider">Blue:</label>
+                    <input type="range" id="blue-slider" class="slider" min="0" max="255" value="0">
+                    <button class="button" id="set-led">Set LED</button>
+                </div>
+                <div class="status-card">
+                    <p id="battery-status">Battery: --%</p>
+                    <p id="position-status">Position: (--, --) angle --° on_mat: --</p>
+                    <p id="subscription-status">Position updates: not subscribed</p>
+                </div>
             </div>
-        </div>
-        <div class="input-container">
-            <button class="button" id="battery">Get Battery</button>
-            <button class="button" id="position-once">Get Position Once</button>
-            <button class="button" id="position-subscribe">Subscribe Position</button>
-            <button class="button" id="position-unsubscribe">Stop Position Updates</button>
-        </div>
-        <div class="slider-container">
-            <label for="red-slider">Red:</label>
-            <input type="range" id="red-slider" class="slider" min="0" max="255" value="255">
-            <label for="green-slider">Green:</label>
-            <input type="range" id="green-slider" class="slider" min="0" max="255" value="0">
-            <label for="blue-slider">Blue:</label>
-            <input type="range" id="blue-slider" class="slider" min="0" max="255" value="0">
-            <button class="button" id="set-led">Set LED</button>
-        </div>
-        <div class="status-panel">
-            <p id="battery-status">Battery: --%</p>
-            <p id="position-status">Position: (--, --) angle --° on_mat: --</p>
-            <p id="subscription-status">Position updates: not subscribed</p>
         </div>
         <div class="console" id="console"></div>
     </div>
@@ -197,7 +219,9 @@
 
         function logToConsole(message) {
             const timestamp = new Date().toLocaleTimeString();
-            consoleElement.innerHTML += `[${timestamp}] ${message}\n`;
+            const entry = document.createElement("div");
+            entry.textContent = `[${timestamp}] ${message}`;
+            consoleElement.appendChild(entry);
             consoleElement.scrollTop = consoleElement.scrollHeight;
         }
 
