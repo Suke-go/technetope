@@ -25,8 +25,9 @@
             flex-wrap: wrap;
             gap: 24px;
             justify-content: center;
-            width: 90%;
-            max-width: 1100px;
+            align-items: stretch;
+            width: 95%;
+            max-width: 1400px;
         }
         .panel {
             background-color: #fff;
@@ -35,6 +36,41 @@
             padding: 20px;
             flex: 1 1 340px;
             min-width: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-field {
+            flex: 0 0 440px;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .field-container {
+            width: 420px;
+            height: 420px;
+            max-width: 100%;
+            border: 2px solid #1f2b46;
+            border-radius: 12px;
+            padding: 10px;
+            box-sizing: border-box;
+            background: linear-gradient(135deg, #fefefe, #f2f5ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #field-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            background-color: #f6f8ff;
+        }
+        .field-legend {
+            font-size: 14px;
+            color: #555;
+            text-align: center;
+            line-height: 1.4;
         }
         .button {
             width: 100px;
@@ -204,6 +240,16 @@
                     <p id="subscription-status">Position updates: not subscribed</p>
                 </div>
             </div>
+            <div class="panel panel-field">
+                <h2>Field View</h2>
+                <div class="field-container">
+                    <canvas id="field-canvas" width="420" height="420"></canvas>
+                </div>
+                <div class="field-legend">
+                    <p>Coordinate space: top-left (45, 45), bottom-right (455, 455)</p>
+                    <p id="field-hint">Latest: -- (--, --)</p>
+                </div>
+            </div>
         </div>
         <div class="console" id="console"></div>
     </div>
@@ -216,6 +262,17 @@
         const positionStatus = document.getElementById("position-status");
         const subscriptionStatus = document.getElementById("subscription-status");
         let positionSubscribed = false;
+        const fieldCanvas = document.getElementById("field-canvas");
+        const fieldHint = document.getElementById("field-hint");
+        const fieldCtx = fieldCanvas ? fieldCanvas.getContext("2d") : null;
+        const FIELD_MIN = 45;
+        const FIELD_MAX = 455;
+        const FIELD_RANGE = FIELD_MAX - FIELD_MIN;
+        const FIELD_SIZE_MM = 560;
+        const TOIO_WIDTH_MM = 32;
+        const TOIO_LENGTH_MM = 71;
+        const TOIO_DISPLAY_SCALE = 0.8;
+        const fieldState = { cubes: {} };
 
         function logToConsole(message) {
             const timestamp = new Date().toLocaleTimeString();
@@ -283,6 +340,82 @@
             logToConsole("WebSocket connection established.");
         };
 
+        function drawField() {
+            if (!fieldCtx) return;
+            const { width, height } = fieldCanvas;
+            fieldCtx.clearRect(0, 0, width, height);
+
+            fieldCtx.fillStyle = "#f9fbff";
+            fieldCtx.fillRect(0, 0, width, height);
+
+            fieldCtx.strokeStyle = "#e0e6f4";
+            fieldCtx.lineWidth = 1;
+            const gridLines = 8;
+            for (let i = 1; i < gridLines; i++) {
+                const offset = (width / gridLines) * i;
+                fieldCtx.beginPath();
+                fieldCtx.moveTo(offset, 0);
+                fieldCtx.lineTo(offset, height);
+                fieldCtx.stroke();
+                fieldCtx.beginPath();
+                fieldCtx.moveTo(0, offset);
+                fieldCtx.lineTo(width, offset);
+                fieldCtx.stroke();
+            }
+
+            const scalePerMmX = (width / FIELD_SIZE_MM) * TOIO_DISPLAY_SCALE;
+            const scalePerMmY = (height / FIELD_SIZE_MM) * TOIO_DISPLAY_SCALE;
+
+            fieldCtx.strokeStyle = "#b5c2df";
+            fieldCtx.lineWidth = 2;
+            fieldCtx.strokeRect(1, 1, width - 2, height - 2);
+
+            Object.entries(fieldState.cubes).forEach(([cubeId, position]) => {
+                const { x, y, angle, on_mat } = position;
+                if (typeof x !== "number" || typeof y !== "number") return;
+
+                const clampedX = Math.min(Math.max(x, FIELD_MIN), FIELD_MAX);
+                const clampedY = Math.min(Math.max(y, FIELD_MIN), FIELD_MAX);
+                const canvasX = ((clampedX - FIELD_MIN) / FIELD_RANGE) * width;
+                const canvasY = ((clampedY - FIELD_MIN) / FIELD_RANGE) * height;
+                const rectLength = TOIO_LENGTH_MM * scalePerMmX;
+                const rectWidth = TOIO_WIDTH_MM * scalePerMmY;
+                const rad = typeof angle === "number" ? (angle * Math.PI) / 180 : 0;
+
+                fieldCtx.save();
+                fieldCtx.translate(canvasX, canvasY);
+                fieldCtx.rotate(rad);
+                fieldCtx.fillStyle = on_mat ? "#6fa4ff" : "#b6c2d8";
+                fieldCtx.strokeStyle = "#2f4970";
+                fieldCtx.lineWidth = 2;
+                fieldCtx.fillRect(-rectLength / 2, -rectWidth / 2, rectLength, rectWidth);
+                fieldCtx.strokeRect(-rectLength / 2, -rectWidth / 2, rectLength, rectWidth);
+
+                fieldCtx.beginPath();
+                fieldCtx.moveTo(0, 0);
+                fieldCtx.lineTo(rectLength / 2, 0);
+                fieldCtx.stroke();
+                fieldCtx.restore();
+
+                fieldCtx.fillStyle = "#1a1d23";
+                fieldCtx.font = "12px monospace";
+                fieldCtx.fillText(cubeId, canvasX + rectWidth, canvasY - rectWidth);
+            });
+        }
+
+        function updateFieldPosition(target, position) {
+            if (!fieldCtx || !position || !target) return;
+            fieldState.cubes[target] = position;
+            if (fieldHint) {
+                const x = position.x ?? "--";
+                const y = position.y ?? "--";
+                fieldHint.textContent = `Latest: ${target} (${x}, ${y})`;
+            }
+            drawField();
+        }
+
+        drawField();
+
         ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
             logToConsole(`Message from server: ${JSON.stringify(message)}`);
@@ -297,6 +430,9 @@
                         const pos = payload.position;
                         positionStatus.textContent =
                             `Position: (${pos.x ?? "--"}, ${pos.y ?? "--"}) angle ${pos.angle ?? "--"}° on_mat: ${pos.on_mat ?? "--"}`;
+                        if (payload.target) {
+                            updateFieldPosition(payload.target, pos);
+                        }
                     }
                     if (typeof payload.notify === "boolean") {
                         positionSubscribed = payload.notify;
