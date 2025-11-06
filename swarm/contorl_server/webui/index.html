@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>toio Control Console</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <div class="title-block">
+          <h1>toio Control Console</h1>
+          <p class="status-line">
+            <span id="connection-dot" class="status-dot is-offline"></span>
+            <span id="connection-label">Disconnected</span>
+          </p>
+        </div>
+        <div class="connection-controls">
+          <label class="input-field">
+            <span>WebSocket URL</span>
+            <input
+              type="text"
+              id="ws-url"
+              value="ws://localhost:8081/ws/ui"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+          <label class="checkbox-field">
+            <input type="checkbox" id="mock-toggle" />
+            <span>Use mock data</span>
+          </label>
+          <button id="connect-btn" class="primary">Connect</button>
+          <button id="snapshot-btn" class="ghost" title="Request snapshot">Snapshot</button>
+        </div>
+        <div class="meta-line">
+          <span id="last-activity">Last activity: -</span>
+          <span id="fleet-summary">Fleet: -</span>
+        </div>
+      </header>
+
+      <main class="dashboard-grid">
+        <section class="panel relay-panel">
+          <div class="panel-header">
+            <h2>Relays</h2>
+            <span id="relay-summary" class="muted">0 online</span>
+          </div>
+          <div class="relay-list" id="relay-list">
+            <p class="placeholder">No relay data yet.</p>
+          </div>
+        </section>
+
+        <section class="panel canvas-panel">
+          <div class="panel-header">
+            <h2>Field</h2>
+            <div class="panel-actions">
+              <span id="selected-count">0 cube(s) selected</span>
+              <button id="clear-selection-btn" class="ghost small">Clear selection</button>
+              <button id="reset-view-btn" class="ghost small" title="Reset field view">
+                Reset view
+              </button>
+            </div>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="field-canvas" width="640" height="480"></canvas>
+            <div class="canvas-overlay">
+              <p id="canvas-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+              <p id="field-extent-label">Field: 45,45 → 455,455 mm</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel cube-panel">
+          <div class="panel-header">
+            <h2>Cubes</h2>
+            <div class="panel-actions">
+              <span id="cube-summary" class="muted">0 cubes</span>
+              <input
+                type="search"
+                id="cube-filter"
+                placeholder="Search by cube or relay"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table id="cube-table">
+              <thead>
+                <tr>
+                  <th>Cube</th>
+                  <th>Relay</th>
+                  <th>Battery</th>
+                  <th>LED</th>
+                  <th>State</th>
+                  <th>Position</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="6" class="placeholder">Waiting for data…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel control-panel">
+          <div class="panel-header">
+            <h2>Commands</h2>
+            <span class="muted">Targets: leave empty to use selection</span>
+          </div>
+
+          <section class="control-section">
+            <h3>Manual Drive</h3>
+            <form id="manual-drive-form">
+              <label>
+                Targets
+                <input type="text" name="targets" placeholder="e.g. 38t,j2T" autocomplete="off" />
+              </label>
+              <div class="grid-2">
+                <label>
+                  Left (-100〜100)
+                  <input type="number" name="left" min="-100" max="100" value="30" required />
+                </label>
+                <label>
+                  Right (-100〜100)
+                  <input type="number" name="right" min="-100" max="100" value="30" required />
+                </label>
+              </div>
+              <button type="submit" class="primary block">Send Manual Drive</button>
+            </form>
+          </section>
+
+          <section class="control-section">
+            <h3>Goal Assignment</h3>
+            <form id="goal-form">
+              <label>
+                Targets
+                <input type="text" name="targets" placeholder="Comma separated" autocomplete="off" />
+              </label>
+              <div class="grid-3">
+                <label>
+                  X (mm)
+                  <input type="number" name="x" required min="0" value="120" />
+                </label>
+                <label>
+                  Y (mm)
+                  <input type="number" name="y" required min="0" value="120" />
+                </label>
+                <label>
+                  Angle (deg)
+                  <input type="number" name="angle" placeholder="optional" />
+                </label>
+              </div>
+              <div class="grid-2">
+                <label>
+                  Priority
+                  <input type="number" name="priority" min="0" value="5" />
+                </label>
+                <label class="checkbox-field inline">
+                  <input type="checkbox" name="keep_history" />
+                  <span>Keep history</span>
+                </label>
+              </div>
+              <button type="submit" class="block">Set Goal</button>
+            </form>
+          </section>
+
+          <section class="control-section">
+            <h3>LED</h3>
+            <form id="led-form">
+              <label>
+                Targets
+                <input type="text" name="targets" placeholder="Comma separated" autocomplete="off" />
+              </label>
+              <div class="color-picker">
+                <div class="color-preview" id="led-color-preview" aria-live="polite">
+                  rgb(255, 85, 0)
+                </div>
+                <div class="color-sliders">
+                  <label>
+                    Red
+                    <input type="range" name="color_r" min="0" max="255" value="255" />
+                    <span class="slider-value" data-color-output="r">255</span>
+                  </label>
+                  <label>
+                    Green
+                    <input type="range" name="color_g" min="0" max="255" value="85" />
+                    <span class="slider-value" data-color-output="g">85</span>
+                  </label>
+                  <label>
+                    Blue
+                    <input type="range" name="color_b" min="0" max="255" value="0" />
+                    <span class="slider-value" data-color-output="b">0</span>
+                  </label>
+                </div>
+                <label class="brightness-field">
+                  Brightness (0-255)
+                  <input type="number" name="brightness" min="0" max="255" value="255" />
+                </label>
+              </div>
+              <button type="submit" class="block">Apply LED</button>
+            </form>
+          </section>
+
+          <section class="control-section">
+            <h3>Groups</h3>
+            <form id="group-form">
+              <label>
+                Group ID
+                <input type="text" name="group_id" placeholder="alpha" required />
+              </label>
+              <label>
+                Members
+                <input type="text" name="members" placeholder="Comma separated" autocomplete="off" />
+              </label>
+              <button type="submit" class="block">Save Group</button>
+            </form>
+          </section>
+        </section>
+
+        <section class="panel log-panel">
+          <div class="panel-header">
+            <h2>Log &amp; Alerts</h2>
+            <button id="clear-log-btn" class="ghost small">Clear</button>
+          </div>
+          <ul id="log-list" class="log-list">
+            <li class="placeholder">No log entries yet.</li>
+          </ul>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast-container" aria-live="polite"></div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
