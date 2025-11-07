@@ -1,599 +1,333 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Single+Ink:wght@100..900&display=swap" rel="stylesheet">
+  <!-- フォント -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Single+Ink:wght@100..900&family=DotGothic16&display=swap" rel="stylesheet">
 
-<style>
-.bitcount-grid-single-ink {
-  font-family: "Bitcount Grid Single Ink", system-ui, sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 300; /* Light */
-  font-style: normal;
-  font-variation-settings:
-    "slnt" 0,
-    "CRSV" 0.5,
-    "ELSH" 0,
-    "ELXP" 0,
-    "SZP1" 0,
-    "SZP2" 0,
-    "XPN1" 0,
-    "XPN2" 0,
-    "YPN1" 0,
-    "YPN2" 0;
-}
-</style>
+  <style>
+  .bitcount-grid-single-ink {
+    font-family: "Bitcount Grid Single Ink", system-ui, sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 300;
+    font-style: normal;
+  }
+  </style>
     
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Technetope</title>
-    <link rel="preload" as="image" href="https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_claud3.png">
-    <style>
-        body {
-            opacity: 0;
-            transition: opacity 0.8s ease-in;
-        }
-        
-        body.loaded {
-            opacity: 1;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Hiragino Mincho ProN', 'ヒラギノ明朝 ProN', 'Yu Mincho', '游明朝', 'Times New Roman', serif;
-            background-color: #0a0a0a;
-            background-image: url('https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_claud3.png');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
-            color: #e8e8e8;
-            line-height: 2;
-            overflow-x: hidden;
-        }
-        
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 80px 40px;
-            position: relative;
-        }
-        
-        /* ヘッダー部分 */
-        header {
-            text-align: center;
-            margin-bottom: 120px;
-            position: relative;
-        }
-        
-        h1 {
-            font-size: 4em;
-            font-weight: 300;
-            letter-spacing: 0.15em;
-            margin-bottom: 20px;
-            opacity: 0;
-            animation: fadeIn 2s ease-in forwards;
-        }
-        
-        .subtitle {
-            font-size: 1.1em;
-            letter-spacing: 0.3em;
-            color: #888;
-            opacity: 0;
-            animation: fadeIn 2s ease-in 0.5s forwards;
-        }
-        
-        .theme {
-            margin-top: 60px;
-            font-size: 1.1em;
-            letter-spacing: 0.1em;
-            opacity: 0;
-            animation: fadeIn 2s ease-in 1s forwards;
-        }
-        
-        .video-container {
-            margin-top: 60px;
-            text-align: center;
-            opacity: 0;
-            animation: fadeIn 2s ease-in 1.5s forwards;
-        }
-        
-        .video-container iframe {
-            max-width: 100%;
-            border: 1px solid #222;
-        }
-        
-        .nav-link {
-            position: absolute;
-            top: 20px;
-            right: 40px;
-            color: #eeeeee;
-            text-decoration: none;
-            font-size: 1.1em;
-            letter-spacing: 0.1em;
-            transition: color 0.3s;
-            display: flex;
-            gap: 20px;
-        }
-        
-        .nav-link a {
-            color: #888;
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-        
-        .nav-link a:hover {
-            color: #e8e8e8;
-        }
-        
-        /* セクション */
-        section {
-            margin-bottom: 100px;
-            opacity: 0;
-            animation: fadeInUp 1.5s ease-out forwards;
-        }
-        
-        section:nth-child(2) { animation-delay: 1.5s; }
-        section:nth-child(3) { animation-delay: 2s; }
-        
-        h2 {
-            font-size: 1.5em;
-            font-weight: 400;
-            letter-spacing: 0.15em;
-            margin-bottom: 40px;
-            text-align: center;
-            position: relative;
-        }
-        
-        h2::after {
-            content: '';
-            display: block;
-            width: 60px;
-            height: 1px;
-            background: #444;
-            margin: 20px auto 0;
-        }
-        
-        .statement p {
-            margin-bottom: 30px;
-            text-align: justify;
-            text-indent: 1em;
-            font-size: 1.05em;
-            line-height: 2.2;
-        }
-        
-        .statement p:first-of-type {
-            text-indent: 0;
-            text-align: center;
-            font-size: 1.2em;
-            margin-bottom: 50px;
-            letter-spacing: 0.05em;
-        }
-        
-        /* 引用部分 */
-        .words {
-            text-align: center;
-            margin-top: 120px;
-            padding: 60px 0;
-            border-top: 1px solid #222;
-            border-bottom: 1px solid #222;
-        }
-        
-        .words-title {
-            font-size: 1.1em;
-            letter-spacing: 0.2em;
-            color: #666;
-            margin-bottom: 40px;
-        }
-        
-        .quote-main {
-            font-style: italic;
-            font-size: 1.3em;
-            margin-bottom: 20px;
-            letter-spacing: 0.05em;
-        }
-        
-        .author {
-            font-size: 0.9em;
-            color: #888;
-            margin-top: 30px;
-            letter-spacing: 0.1em;
-        }
-        
-        .quote-text {
-            margin-top: 50px;
-            padding: 0 40px;
-            font-size: 0.95em;
-            line-height: 2.2;
-            color: #aaa;
-            text-align: justify;
-        }
-        
-        /* アニメーション */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Technetope</title>
+  <link rel="preload" as="image" href="https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_claud3.png">
+  <style>
+    body {
+      opacity: 0;
+      transition: opacity 0.8s ease-in;
+    }
+    body.loaded { opacity: 1; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    body {
+      font-family: 'Hiragino Mincho ProN','ヒラギノ明朝 ProN','Yu Mincho','游明朝','Times New Roman',serif;
+      background-color: #0a0a0a;
+      background-image: url('https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_claud3.png');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      color: #e8e8e8;
+      line-height: 2;
+      overflow-x: hidden;
+    }
 
-        
-        /* 点滅 */
-.blinking1{
-	-webkit-animation:blink 0.8s ease-in-out infinite alternate;
-    -moz-animation:blink 0.8s ease-in-out infinite alternate;
-    animation:blink 0.8s ease-in-out infinite alternate;
-}
-@-webkit-keyframes blink{
-    0% {opacity:0;}
-    100% {opacity:1;}
-}
-@-moz-keyframes blink{
-    0% {opacity:0;}
-    100% {opacity:1;}
-}
-@keyframes blink{
-    0% {opacity:0;}
-    100% {opacity:1;}
-}
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 80px 40px;
+      position: relative;
+    }
 
-		.blinking2{
-	-webkit-animation:blink 0.85s ease-in-out infinite alternate;
-    -moz-animation:blink 0.85s ease-in-out infinite alternate;
-    animation:blink 0.85s ease-in-out infinite alternate;
-}
-@-webkit-keyframes blink{
-    0% {opacity:0;}
-    100% {opacity:1;}
-}
-@-moz-keyframes blink{
-    0% {opacity:0;}
-    100% {opacity:1;}
-}
-@keyframes blink{
-    0% {opacity:0;}
-    100% {opacity:1;}
-}
+    /* ヘッダー部分 */
+    header {
+      text-align: center;
+      margin-bottom: 120px;
+      position: relative;
+    }
 
-        
-        /* 背景の動くドット */
-        .background-dots {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-        }
-        
-        .dot {
-            position: absolute;
-            width: 2px;
-            height: 2px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-            animation: float 20s infinite ease-in-out;
-        }
-        
-        @keyframes float {
-            0%, 100% {
-                transform: translate(0, 0);
-            }
-            33% {
-                transform: translate(30px, -30px);
-            }
-            66% {
-                transform: translate(-20px, 20px);
-            }
-        }
-        
-        /* スマホ用の最適化 (768px以下) */
-        @media (max-width: 768px) {
-            body {
-                /* スマホでは縦長の背景を最適化 */
-                background-size: auto 100%;
-                background-position: center center;
-                background-attachment: scroll;
-            }
-            
-            .container {
-                padding: 60px 20px;
-            }
-            
-            h1 {
-                font-size: 2.2em;
-                letter-spacing: 0.1em;
-            }
-            
-            .subtitle {
-                font-size: 0.85em;
-                letter-spacing: 0.2em;
-            }
-            
-            .theme {
-                margin-top: 40px;
-                font-size: 1em;
-            }
-            
-            .nav-link {
-                right: 15px;
-                top: 15px;
-                flex-direction: column;
-                gap: 10px;
-                font-size: 1.0em;
-            }
-            
-            .nav-link a {
-                /* タッチ操作しやすく */
-                padding: 5px;
-                display: inline-block;
-            }
-            
-            .video-container {
-                margin-top: 40px;
-            }
-            
-            .video-container iframe {
-                width: 100%;
-                height: auto;
-                aspect-ratio: 16 / 9;
-            }
-            
-            h2 {
-                font-size: 1.3em;
-                margin-bottom: 30px;
-            }
-            
-            .statement p {
-                font-size: 0.95em;
-                line-height: 2;
-                margin-bottom: 25px;
-            }
-            
-            .statement p:first-of-type {
-                font-size: 1.1em;
-                margin-bottom: 40px;
-            }
-            
-            .words {
-                margin-top: 80px;
-                padding: 40px 0;
-            }
-            
-            .words-title {
-                font-size: 0.8em;
-                margin-bottom: 30px;
-            }
-            
-            .quote-main {
-                font-size: 1.1em;
-            }
-            
-            .author {
-                font-size: 0.85em;
-                margin-top: 20px;
-            }
-            
-            .quote-text {
-                padding: 0 15px;
-                font-size: 0.9em;
-                line-height: 2;
-            }
-            
-            section {
-                margin-bottom: 70px;
-            }
-        }
-        
-        /* タブレット用の最適化 (769px〜1024px) */
-        @media (min-width: 769px) and (max-width: 1024px) {
-            body {
-                background-size: cover;
-                background-position: center center;
-            }
-            
-            .container {
-                padding: 70px 35px;
-            }
-            
-            h1 {
-                font-size: 3.2em;
-            }
-            
-            .video-container iframe {
-                width: 100%;
-                max-width: 700px;
-                aspect-ratio: 16 / 9;
-                height: auto;
-            }
-        }
-        
-        /* PC大画面用の最適化 (1025px以上) */
-        @media (min-width: 1025px) {
-            body {
-                background-size: cover;
-                background-position: center center;
-            }
-            
-            @media (min-width: 1400px) {
-                .container {
-                    max-width: 1100px;
-                }
-                
-                h1 {
-                    font-size: 4.5em;
-                }
-            }
-        }
-        
-        /* 横向きスマホ用 */
-        @media (max-width: 768px) and (orientation: landscape) {
-            body {
-                background-size: cover;
-                background-position: center center;
-            }
-            
-            .container {
-                padding: 40px 20px;
-            }
-            
-            header {
-                margin-bottom: 80px;
-            }
-            
-            h1 {
-                font-size: 2em;
-                margin-bottom: 15px;
-            }
-            
-            .theme {
-                margin-top: 30px;
-            }
-            
-            .video-container {
-                margin-top: 30px;
-            }
-        }
-    </style>
+    h1 {
+      font-size: 4em;
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: fadeIn 2s ease-in forwards;
+    }
+
+    .subtitle {
+      font-size: 1.1em;
+      letter-spacing: 0.3em;
+      color: #888;
+      opacity: 0;
+      animation: fadeIn 2s ease-in 0.5s forwards;
+      font-family: "DotGothic16", sans-serif;
+    }
+    .subtitle span, .theme span {
+      display: inline-block;
+      transition: all 0.6s ease;
+      font-family: "DotGothic16", sans-serif;
+      color: #888;
+    }
+    .subtitle span.serif, .theme span.serif {
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      color: #e8e8e8;
+      transform: scale(1.05);
+    }
+
+    .theme {
+      margin-top: 60px;
+      font-size: 1.1em;
+      letter-spacing: 0.1em;
+      opacity: 0;
+      animation: fadeIn 2s ease-in 1s forwards;
+      font-family: "DotGothic16", sans-serif;
+    }
+
+    .video-container {
+      margin-top: 60px;
+      text-align: center;
+      opacity: 0;
+      animation: fadeIn 2s ease-in 1.5s forwards;
+    }
+
+    .video-container iframe {
+      max-width: 100%;
+      border: 1px solid #222;
+    }
+
+    .nav-link {
+      position: absolute;
+      top: 20px;
+      right: 40px;
+      color: #eeeeee;
+      text-decoration: none;
+      font-size: 1.1em;
+      letter-spacing: 0.1em;
+      transition: color 0.3s;
+      display: flex;
+      gap: 20px;
+    }
+    .nav-link a {
+      color: #888;
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+    .nav-link a:hover { color: #e8e8e8; }
+
+    /* セクション */
+    section {
+      margin-bottom: 100px;
+      opacity: 0;
+      animation: fadeInUp 1.5s ease-out forwards;
+    }
+    section:nth-child(2) { animation-delay: 1.5s; }
+    section:nth-child(3) { animation-delay: 2s; }
+
+    h2 {
+      font-size: 1.5em;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      margin-bottom: 40px;
+      text-align: center;
+      position: relative;
+    }
+    h2::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 1px;
+      background: #444;
+      margin: 20px auto 0;
+    }
+
+    .statement p {
+      margin-bottom: 30px;
+      text-align: justify;
+      text-indent: 1em;
+      font-size: 1.05em;
+      line-height: 2.2;
+    }
+    .statement p:first-of-type {
+      text-indent: 0;
+      text-align: center;
+      font-size: 1.2em;
+      margin-bottom: 50px;
+      letter-spacing: 0.05em;
+    }
+
+    /* 引用部分 */
+    .words {
+      text-align: center;
+      margin-top: 120px;
+      padding: 60px 0;
+      border-top: 1px solid #222;
+      border-bottom: 1px solid #222;
+    }
+    .words-title {
+      font-size: 1.1em;
+      letter-spacing: 0.2em;
+      color: #666;
+      margin-bottom: 40px;
+    }
+    .quote-main {
+      font-style: italic;
+      font-size: 1.3em;
+      margin-bottom: 20px;
+      letter-spacing: 0.05em;
+    }
+    .author {
+      font-size: 0.9em;
+      color: #888;
+      margin-top: 30px;
+      letter-spacing: 0.1em;
+    }
+    .quote-text {
+      margin-top: 50px;
+      padding: 0 40px;
+      font-size: 0.95em;
+      line-height: 2.2;
+      color: #aaa;
+      text-align: justify;
+    }
+
+    @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+    @keyframes fadeInUp { from {opacity:0;transform:translateY(30px);} to {opacity:1;transform:translateY(0);} }
+
+    .background-dots {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: -1;
+    }
+    .dot {
+      position: absolute; width: 2px; height: 2px;
+      background: rgba(255,255,255,0.1); border-radius: 50%;
+      animation: float 20s infinite ease-in-out;
+    }
+    @keyframes float {
+      0%,100% { transform: translate(0,0); }
+      33% { transform: translate(30px,-30px); }
+      66% { transform: translate(-20px,20px); }
+    }
+
+    header h1 {
+      font-family: 'Bitcount Grid Single Ink', monospace;
+      font-size: 4rem;
+      letter-spacing: 0.1em;
+      color: #fff;
+      margin: 0;
+      display: inline-block;
+    }
+    header h1 span {
+      display: inline-block;
+      transition: all 0.6s ease;
+      font-family: 'Bitcount Grid Single Ink', monospace;
+      color: #fff;
+    }
+    header h1 span.serif {
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      transform: scale(1.05);
+    }
+  </style>
 </head>
-<body>
-    <div class="background-dots" id="dots"></div>
-    
-    <div class="container">
-        <div class="nav-link">
-            <a href="technical.html"><p class="bitcount-grid-single-ink">
-            <span class="blinking1">Technical Ingenuity →</span>
-            </p></a>
-            <a href="artists.html"><p class="bitcount-grid-single-ink">
-            <span class="blinking2">Artists →</span>
-            </p></a>
-        </div>
 
-        <header>
-            <h1>Technetope</h1>
-            <div class="subtitle">テクネトープ</div>
-            <div class="theme">— 観客は環境の一部である —</div>
-            <div class="video-container">
-                <iframe width="800" height="450" src="https://www.youtube.com/embed/UVaZf3GliDs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-            </div>
-        </header>
-        
-        <section class="statement">
-            <h2>
-            <p class="bitcount-grid-single-ink">
-            Statement
-            </p></h2>
-            
-            <p>テクノロジーによって構築された新しい"生態系"</p>
-            
-            <p>2.4m四方の空間の中を、30台の小型可動スピーカーが群れとして動く。スピーカーは音を発しながら互いの位置と人間の座標を参照し、群れを形成・分離・再統合する。その動きは、湖面を泳ぐメダカ、草原を渡るイナゴ、空を渡る鴨のように、自身と群と周囲の生態系(障害物を含む)の絶えず変化する作用のネットワークに応答し続ける。</p>
-            
-            <p>人はただそこに"いる"——観察者でありながら、同時に生態系の一要素として作用する。</p>
-            
-            <p>小さな生物にとって、人は流れてきた障害物であり、木の葉や浮き草、葦や大木のように回避すべき対象である。スピーカー群はその存在を本能のように察知し、分かれ、避け、再び群れを成す。この振る舞いが秩序となった生態系内で人間は唯一、本能ではなく意志を持ってシステムに参与してくる事象である。</p>
-            
-            <p>「Technetope」は、テクノロジーで生み出した生物が本能的に振る舞う非生命体群を形成して、を通じて、"テクノロジーによって生み出された生態系システムに人間が反秩序的に介入してくるが、その絶えず変化する作用に生態系の秩序が順応する瞬間"を描き出す試みである。それは自然と人工の二項対立を越え、人間・機械・環境が相互に生成し合う新たな生命観の原型を提示する。</p>
-        </section>
-        
-        <section class="words">
-            <div class="words-title"><p class="bitcount-grid-single-ink">
-            Words of the Ancients
-            </p></div>
-            
-            <div class="quote-main">
-                <em>L'homme est un roseau pensant</em><br>
-                人間は考える葦である
-            </div>
-            
-            <div class="author">Blaise Pascal (1623–1662)</div>
-            
-            <div class="quote-text">
-                人間は一本の葦にすぎない。自然のうちでもっとも弱いものである。だが、それは考える葦である。宇宙全体が武装して彼を押しつぶす必要もない。一つの蒸気、一滴の水でも彼を殺すのに十分である。しかし、宇宙が彼を押しつぶしたとしても、人間はなおそれを押しつぶすものよりも高貴である。彼は自分が死ぬことを知り、宇宙が彼にまさることを知っている。宇宙はそれを知らないのだ。
-            </div>
-        </section>
+<body>
+  <div class="background-dots" id="dots"></div>
+  
+  <div class="container">
+    <div class="nav-link">
+      <a href="technical.html"><p class="bitcount-grid-single-ink"><span class="blinking1">Technical Ingenuity →</span></p></a>
+      <a href="artists.html"><p class="bitcount-grid-single-ink"><span class="blinking2">Artists →</span></p></a>
     </div>
 
-    <style>
-        header h1 {
-            font-family: 'Bitcount Grid Single Ink', monospace;
-            font-size: 4rem;
-            letter-spacing: 0.1em;
-            color: #fff;
-            margin: 0;
-            display: inline-block;
-        }
+    <header>
+      <h1>Technetope</h1>
+      <div class="subtitle">テクネトープ</div>
+      <div class="theme">— 観客は環境の一部である —</div>
+      <div class="video-container">
+        <iframe width="800" height="450" src="https://www.youtube.com/embed/UVaZf3GliDs" frameborder="0" allowfullscreen></iframe>
+      </div>
+    </header>
+    
+    <section class="statement">
+      <h2><p class="bitcount-grid-single-ink">Statement</p></h2>
+      <p>テクノロジーによって構築された新しい"生態系"</p>
+      <p>2.4m四方の空間の中を、30台の小型可動スピーカーが群れとして動く。スピーカーは音を発しながら互いの位置と人間の座標を参照し、群れを形成・分離・再統合する。その動きは、湖面を泳ぐメダカ、草原を渡るイナゴ、空を渡る鴨のように、自身と群と周囲の生態系(障害物を含む)の絶えず変化する作用のネットワークに応答し続ける。</p>
+      <p>人はただそこに"いる"——観察者でありながら、同時に生態系の一要素として作用する。</p>
+      <p>小さな生物にとって、人は流れてきた障害物であり、木の葉や浮き草、葦や大木のように回避すべき対象である。スピーカー群はその存在を本能のように察知し、分かれ、避け、再び群れを成す。この振る舞いが秩序となった生態系内で人間は唯一、本能ではなく意志を持ってシステムに参与してくる事象である。</p>
+      <p>「Technetope」は、テクノロジーで生み出した生物が本能的に振る舞う非生命体群を形成して、を通じて、"テクノロジーによって生み出された生態系システムに人間が反秩序的に介入してくるが、その絶えず変化する作用に生態系の秩序が順応する瞬間"を描き出す試みである。それは自然と人工の二項対立を越え、人間・機械・環境が相互に生成し合う新たな生命観の原型を提示する。</p>
+    </section>
+    
+    <section class="words">
+      <div class="words-title"><p class="bitcount-grid-single-ink">Words of the Ancients</p></div>
+      <div class="quote-main"><em>L'homme est un roseau pensant</em><br>人間は考える葦である</div>
+      <div class="author">Blaise Pascal (1623–1662)</div>
+      <div class="quote-text">人間は一本の葦にすぎない。自然のうちでもっとも弱いものである。だが、それは考える葦である。宇宙全体が武装して彼を押しつぶす必要もない。一つの蒸気、一滴の水でも彼を殺すのに十分である。しかし、宇宙が彼を押しつぶしたとしても、人間はなおそれを押しつぶすものよりも高貴である。彼は自分が死ぬことを知り、宇宙が彼にまさることを知っている。宇宙はそれを知らないのだ。</div>
+    </section>
+  </div>
 
-        header h1 span {
-            display: inline-block;
-            transition: all 0.6s ease;
-            font-family: 'Bitcount Grid Single Ink', monospace;
-            color: #fff;
-        }
+  <script>
+    // 背景ドット
+    const dotsContainer = document.getElementById('dots');
+    const dotCount = 30;
+    for (let i = 0; i < dotCount; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.style.left = Math.random() * 100 + '%';
+      dot.style.top = Math.random() * 100 + '%';
+      dot.style.animationDelay = Math.random() * 20 + 's';
+      dot.style.animationDuration = (15 + Math.random() * 10) + 's';
+      dotsContainer.appendChild(dot);
+    }
 
-        header h1 span.serif {
-            font-family: "游明朝体", "Yu Mincho", "Hiragino Mincho ProN", serif;
-            transform: scale(1.05);
-        }
-    </style>
+    // 背景ロード
+    const bgImage = new Image();
+    bgImage.src = 'https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_claud3.png';
+    bgImage.onload = () => document.body.classList.add('loaded');
+    bgImage.onerror = () => document.body.classList.add('loaded');
 
-    <script>
-        const dotsContainer = document.getElementById('dots');
-        const dotCount = 30;
-        for (let i = 0; i < dotCount; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'dot';
-            dot.style.left = Math.random() * 100 + '%';
-            dot.style.top = Math.random() * 100 + '%';
-            dot.style.animationDelay = Math.random() * 20 + 's';
-            dot.style.animationDuration = (15 + Math.random() * 10) + 's';
-            dotsContainer.appendChild(dot);
-        }
+    // h1 Bitcount→明朝
+    const h1 = document.querySelector("header h1");
+    const text = h1.textContent.trim();
+    h1.textContent = "";
+    const spans = text.split("").map(ch => {
+      const span = document.createElement("span");
+      span.textContent = ch;
+      h1.appendChild(span);
+      return span;
+    });
+    setTimeout(() => {
+      const order = spans.map((_, i) => i).sort(() => Math.random() - 0.5);
+      order.forEach((i, index) => {
+        setTimeout(() => { spans[i].classList.add("serif"); }, index * 250 + Math.random() * 300);
+      });
+    }, 1700);
 
-        const bgImage = new Image();
-        bgImage.src = 'https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_claud3.png';
-        bgImage.onload = () => document.body.classList.add('loaded');
-        bgImage.onerror = () => document.body.classList.add('loaded');
-
-        const h1 = document.querySelector("header h1");
-        const text = h1.textContent.trim();
-        h1.textContent = "";
-
-        const spans = text.split("").map(ch => {
-            const span = document.createElement("span");
-            span.textContent = ch;
-            h1.appendChild(span);
-            return span;
+    // subtitle と theme の DotGothic16→明朝
+    [".subtitle", ".theme"].forEach((selector, index) => {
+      const element = document.querySelector(selector);
+      const text = element.textContent.trim();
+      element.textContent = "";
+      const spans = text.split("").map(ch => {
+        const span = document.createElement("span");
+        span.textContent = ch;
+        element.appendChild(span);
+        return span;
+      });
+      setTimeout(() => {
+        const order = spans.map((_, i) => i).sort(() => Math.random() - 0.5);
+        order.forEach((i, idx) => {
+          setTimeout(() => { spans[i].classList.add("serif"); }, idx * 180 + Math.random() * 200);
         });
-
-        setTimeout(() => {
-            const order = spans.map((_, i) => i).sort(() => Math.random() - 0.5);
-            order.forEach((i, index) => {
-                setTimeout(() => {
-                    spans[i].classList.add("serif");
-                }, index * 250 + Math.random() * 300);
-            });
-        }, 1700);
-    </script>
+      }, 2000 + index * 300);
+    });
+  </script>
 </body>
 </html>
