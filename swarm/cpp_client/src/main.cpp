@@ -139,7 +139,8 @@ std::vector<ServerConfig> load_fleet_config(const std::string &path) {
     if (auto cubes_node = server_node["cubes"]; cubes_node && cubes_node.IsSequence()) {
       for (const auto &cube_node : cubes_node) {
         CubeConfig cube;
-        cube.id = scalar_or_throw<std::string>(cube_node["id"], "servers[].cubes[].id");
+        cube.id =
+            scalar_or_throw<std::string>(cube_node["id"], "servers[].cubes[].id");
         cube.auto_connect = cube_node["auto_connect"].as<bool>(false);
         cube.auto_subscribe = cube_node["auto_subscribe"].as<bool>(false);
         if (auto led_node = cube_node["initial_led"]; led_node) {
@@ -224,7 +225,8 @@ void print_status(const std::vector<CubeSnapshot> &snapshots) {
   for (const auto &snapshot : snapshots) {
     const auto &state = snapshot.state;
     std::string battery =
-        state.battery_percent ? std::to_string(*state.battery_percent) + "%" : "-";
+        state.battery_percent ? std::to_string(*state.battery_percent) + "%"
+                              : "-";
     std::string position = "-";
     if (state.position) {
       position = std::to_string(state.position->x) + "," +
@@ -416,7 +418,6 @@ int main(int argc, char **argv) {
                          static_cast<std::uint8_t>(to_int(tokens[2])),
                          static_cast<std::uint8_t>(to_int(tokens[3]))};
           std::size_t success = manager.set_led_all(color, false);
-          // 過剰送信対策のスリープは ServerSession 側で必要に応じ実装する
           std::cout << "Broadcast LED command to " << success << " cubes.\n";
         } else if (cmd == "battery") {
           auto target = active.get();
@@ -480,3 +481,4 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
