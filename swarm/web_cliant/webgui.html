@@ -20,6 +20,66 @@
             min-height: 100vh;
             padding: 20px 0 40px;
         }
+        .server-config {
+            width: 95%;
+            max-width: 1100px;
+            margin: 10px 0 24px;
+            padding: 16px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: stretch;
+        }
+        .server-config-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+        }
+        .server-config label {
+            font-weight: bold;
+            color: #1f2b46;
+        }
+        .server-config input {
+            flex: 1 1 320px;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #cfd8ea;
+        }
+        .server-config .server-btn {
+            width: auto;
+            min-width: 130px;
+            height: 44px;
+            margin: 0;
+        }
+        .server-config .server-btn.secondary {
+            background-color: #6c757d;
+        }
+        .server-config .server-btn.secondary:active {
+            background-color: #545b62;
+        }
+        .server-status-text {
+            text-align: center;
+            font-size: 14px;
+            color: #333;
+        }
+        .server-status-text span[data-status="connected"] {
+            color: #1f995b;
+            font-weight: 600;
+        }
+        .server-status-text span[data-status="connecting"] {
+            color: #c58a00;
+            font-weight: 600;
+        }
+        .server-status-text span[data-status="error"] {
+            color: #c0392b;
+            font-weight: 600;
+        }
         .controller-layout {
             display: flex;
             flex-wrap: wrap;
@@ -260,6 +320,25 @@
 <body>
     <div class="controller">
         <h1>Toio Cube Controller</h1>
+        <div class="server-config">
+            <div class="server-config-row">
+                <label for="server-address">Server Address</label>
+                <input type="text" id="server-address" list="server-address-presets" value="ws://localhost:8765/ws" placeholder="ws://host:8765/ws">
+                <datalist id="server-address-presets">
+                    <option value="ws://localhost:8765/ws">Localhost (default)</option>
+                    <option value="ws://127.0.0.1:8765/ws">127.0.0.1</option>
+                    <option value="ws://192.168.0.10:8765/ws">192.168.0.10</option>
+                    <option value="ws://5b-00.local:8765/ws">5b-00.local</option>
+                    <option value="ws://5b-01.local:8765/ws">5b-01.local</option>
+                    <option value="ws://5b-02.local:8765/ws">5b-02.local</option>
+                    <option value="ws://5b-03.local:8765/ws">5b-03.local</option>
+                    <option value="ws://5b-04.local:8765/ws">5b-04.local</option>
+                </datalist>
+                <button class="button server-btn" id="server-connect">Connect</button>
+                <button class="button server-btn secondary" id="server-disconnect">Disconnect</button>
+            </div>
+            <p class="server-status-text">Status: <span id="server-status-value" data-status="disconnected">Disconnected</span></p>
+        </div>
         <div class="controller-layout">
             <div class="panel panel-control">
                 <div class="cube-list">
@@ -361,8 +440,16 @@
     </div>
 
     <script>
-        const ws = new WebSocket("ws://localhost:8765/ws");
+        const DEFAULT_WS_URL = "ws://localhost:8765/ws";
+        const SERVER_ADDRESS_STORAGE_KEY = "toio-webgui-ws-url";
+        let ws = null;
+        let wsConnectionId = 0;
+
         const consoleElement = document.getElementById("console");
+        const serverAddressInput = document.getElementById("server-address");
+        const serverStatusValue = document.getElementById("server-status-value");
+        const serverConnectBtn = document.getElementById("server-connect");
+        const serverDisconnectBtn = document.getElementById("server-disconnect");
         const requireResultCheckbox = document.getElementById("require-result");
         const fieldCanvas = document.getElementById("field-canvas");
         const fieldHint = document.getElementById("field-hint");
@@ -396,6 +483,28 @@
         let joystickControlSlot = null;
         let ledControlSlot = null;
 
+        function safeLocalStorageGet(key) {
+            try {
+                return window.localStorage.getItem(key);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function safeLocalStorageSet(key, value) {
+            try {
+                window.localStorage.setItem(key, value);
+            } catch (error) {
+                // ignore storage errors
+            }
+        }
+
+        if (serverAddressInput) {
+            const storedAddress = safeLocalStorageGet(SERVER_ADDRESS_STORAGE_KEY);
+            const initialAddress = (storedAddress || serverAddressInput.value || DEFAULT_WS_URL).trim() || DEFAULT_WS_URL;
+            serverAddressInput.value = initialAddress;
+        }
+
         function logToConsole(message) {
             const timestamp = new Date().toLocaleTimeString();
             const entry = document.createElement("div");
@@ -405,8 +514,8 @@
         }
 
         function ensureReady() {
-            if (ws.readyState !== WebSocket.OPEN) {
-                logToConsole("WebSocket is not open. Refresh the page to reconnect.");
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                logToConsole("WebSocket is not open. Use the server controls above to connect.");
                 return false;
             }
             return true;
@@ -614,12 +723,41 @@
 
         drawField();
 
-        ws.onopen = () => {
-            logToConsole("WebSocket connection established.");
-        };
+        function setServerStatus(text, status = "disconnected") {
+            if (!serverStatusValue) return;
+            serverStatusValue.textContent = text;
+            serverStatusValue.dataset.status = status;
+        }
 
-        ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
+        setServerStatus("Disconnected", "disconnected");
+
+        function getServerAddressInputValue() {
+            const value = serverAddressInput?.value?.trim();
+            return value || DEFAULT_WS_URL;
+        }
+
+        function persistServerAddress(address) {
+            if (!address) return;
+            safeLocalStorageSet(SERVER_ADDRESS_STORAGE_KEY, address);
+        }
+
+        function isValidWsUrl(url) {
+            try {
+                const parsed = new URL(url);
+                return parsed.protocol === "ws:" || parsed.protocol === "wss:";
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function handleIncomingMessage(event) {
+            let message;
+            try {
+                message = JSON.parse(event.data);
+            } catch (error) {
+                logToConsole(`Invalid JSON from server: ${event.data}`);
+                return;
+            }
             logToConsole(`Message from server: ${JSON.stringify(message)}`);
 
             if (message.type === "response") {
@@ -649,21 +787,120 @@
                     }
                 }
             }
-        };
+        }
 
-        ws.onclose = () => {
-            logToConsole("WebSocket connection closed.");
+        function markSubscriptionsAsDisconnected() {
             slots.forEach(slot => {
                 if (subscriptionStatusEls[slot]) {
                     subscriptionStatusEls[slot].textContent = "Position updates: disconnected";
                 }
                 positionSubscribed[slot] = false;
             });
-        };
+        }
 
-        ws.onerror = (error) => {
-            logToConsole(`WebSocket error: ${error}`);
-        };
+        function resetSubscriptionStatusAfterConnect() {
+            slots.forEach(slot => {
+                if (subscriptionStatusEls[slot]) {
+                    subscriptionStatusEls[slot].textContent = "Position updates: not subscribed";
+                }
+                positionSubscribed[slot] = false;
+            });
+        }
+
+        function connectWebSocket(address) {
+            const targetAddress = (address || "").trim();
+            if (!targetAddress) {
+                logToConsole("接続先のWebSocketアドレスを入力してください。");
+                setServerStatus("No address", "error");
+                return;
+            }
+            if (!isValidWsUrl(targetAddress)) {
+                logToConsole(`Invalid WebSocket URL: ${targetAddress}`);
+                setServerStatus("Invalid URL", "error");
+                return;
+            }
+            persistServerAddress(targetAddress);
+            let socket;
+            try {
+                socket = new WebSocket(targetAddress);
+            } catch (error) {
+                logToConsole(`Failed to open WebSocket: ${error?.message ?? error}`);
+                setServerStatus("Error", "error");
+                return;
+            }
+            const previousSocket = ws;
+            if (previousSocket) {
+                previousSocket.close();
+            }
+            ws = socket;
+            const connectionId = ++wsConnectionId;
+            setServerStatus(`Connecting (${targetAddress})`, "connecting");
+            logToConsole(`Connecting to ${targetAddress}...`);
+
+            socket.addEventListener("open", () => {
+                if (connectionId !== wsConnectionId) return;
+                setServerStatus(`Connected (${targetAddress})`, "connected");
+                resetSubscriptionStatusAfterConnect();
+                logToConsole(`WebSocket connection established (${targetAddress}).`);
+            });
+
+            socket.addEventListener("message", (event) => {
+                if (connectionId !== wsConnectionId) return;
+                handleIncomingMessage(event);
+            });
+
+            socket.addEventListener("close", (event) => {
+                if (connectionId !== wsConnectionId) return;
+                markSubscriptionsAsDisconnected();
+                const reason = event?.reason ? ` (${event.reason})` : "";
+                const suffix = event?.wasClean ? "" : " unexpectedly";
+                logToConsole(`WebSocket connection closed${suffix}${reason}.`);
+                setServerStatus("Disconnected", "disconnected");
+                ws = null;
+            });
+
+            socket.addEventListener("error", (error) => {
+                if (connectionId !== wsConnectionId) return;
+                setServerStatus("Error", "error");
+                logToConsole(`WebSocket error: ${error?.message ?? error}`);
+            });
+        }
+
+        function disconnectWebSocket({ silent = false } = {}) {
+            if (!ws) {
+                if (!silent) {
+                    logToConsole("WebSocket is not connected.");
+                }
+                return;
+            }
+            logToConsole("Disconnecting WebSocket...");
+            ws.close();
+        }
+
+        if (serverConnectBtn) {
+            serverConnectBtn.addEventListener("click", () => {
+                connectWebSocket(getServerAddressInputValue());
+            });
+        }
+
+        if (serverDisconnectBtn) {
+            serverDisconnectBtn.addEventListener("click", () => {
+                disconnectWebSocket();
+            });
+        }
+
+        if (serverAddressInput) {
+            serverAddressInput.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") {
+                    connectWebSocket(getServerAddressInputValue());
+                }
+            });
+            serverAddressInput.addEventListener("change", () => {
+                persistServerAddress(getServerAddressInputValue());
+            });
+        }
+
+        connectWebSocket(getServerAddressInputValue());
 
         document.querySelectorAll("input[name='active-slot']").forEach(radio => {
             radio.addEventListener("change", (event) => {
