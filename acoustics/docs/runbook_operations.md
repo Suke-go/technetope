@@ -167,6 +167,104 @@ GUI からできること:
 
 > GUI は最小権限で動かす。実験ログの保存先は `logs/` 直下に統一し、未来の解析を阻害しない。
 
+### 6.3 WebSocket 経路の手動検証（テストスイート無し）
+
+テスト用フレームワークではなく、本番と同じ WebSocket パイプラインで確認したい場合の手順。
+
+1. **モニタソース（模擬 or 実機）を用意**
+
+   - 実機がある場合は `agent_a_monitor --ws --ws-host 127.0.0.1 --ws-port 48080 --ws-path /ws/events`（監視プロセスが WebSocket を公開する構成）を使う。
+   - 手元だけで流れを確認するならモックサーバー：
+
+     ```bash
+     pip install --user websockets
+     python3 acoustics/tools/monitor/mock_ws_server.py \
+       --devices state/devices.json \
+       --host 127.0.0.1 --port 48080 --path /ws/events
+     ```
+
+     `state/devices.json` に登録済みの ID があれば、それらを使って擬似 heartbeat/diagnostics を流す。
+
+2. **GUI backend を起動し、Monitor WS に接続**
+
+   ```bash
+   export GUI_BACKEND_CONFIG=acoustics/web/backend/config.json   # 省略可。monitorWsUrl が既定値なら不要
+   (cd acoustics/web/backend && pnpm run dev)
+   ```
+
+   起動ログに `[MonitorClient] connected -> ws://127.0.0.1:48080/ws/events` が出れば、backend→monitor 間の WebSocket が成立。
+
+3. **ダッシュボード無しで WebSocket push を観測**
+
+   `ws` パッケージを使った最小 Node クライアント（`pnpm` が依存を解決済み）を走らせ、Push 内容をそのまま確認する。
+
+   ```bash
+   node <<'NODE'
+   import WebSocket from "ws";
+   const ws = new WebSocket("ws://127.0.0.1:48100");
+   ws.on("message", (data) => {
+     const msg = JSON.parse(data.toString());
+     if (["heartbeat","diagnostics","receivelog","sendlog"].includes(msg.type)) {
+       console.log(new Date().toISOString(), msg.type, msg);
+     }
+   });
+   ws.on("open", () => console.log("[probe] connected to GUI hub"));
+   ws.on("close", () => console.log("[probe] socket closed"));
+   NODE
+   ```
+
+   - `type: "heartbeat"` が流れてくれば monitor → backend → hub の経路が成立している。
+   - `timelineService.dispatch` など REST API を叩けば、`sendlog` イベントも同じクライアントで観測できる。
+
+4. **GUI で最終確認**
+
+   React ダッシュボードを起動し、デバイスリストがリアルタイムで更新されることを確認する。上記 Node クライアントを併用すると、GUI 表示と wire 上の実データを突き合わせられる。
+
+### 6.4 Monitor → Backend → Dashboard → Scheduler の起動シーケンス
+
+本番実験で毎回迷わないよう、必要なプロセスを順に並べる。各コマンドは別シェルで実行する。
+
+1. **Monitor（心拍＋WebSocket サーバ）**
+   ```bash
+   mkdir -p acoustics/logs
+   ./build/acoustics/monitor/agent_a_monitor \
+     --port 19100 \
+     --csv acoustics/logs/heartbeat_$(date +%Y%m%d).csv \
+     --registry acoustics/state/devices.json \
+     --ws --ws-host 127.0.0.1 --ws-port 48080 --ws-path /ws/events
+   ```
+   - `acoustics/state/devices.json` がリアルタイム更新される。検証後に `state/devices.json` へマージ。
+
+2. **GUI backend**
+   ```bash
+   (cd acoustics/web/backend && pnpm run dev)
+   ```
+   - 起動ログに `[MonitorClient] connected -> ws://127.0.0.1:48080/ws/events` が出ることを確認。
+
+3. **React Dashboard**
+   ```bash
+   (cd acoustics/web/dashboard && pnpm run dev)
+   ```
+   - ブラウザで `http://127.0.0.1:5173` を開き、デバイス一覧やログを確認。
+
+4. **タイムライン送信（CLI or API）**
+   ```bash
+   ./build/acoustics/scheduler/agent_a_scheduler \
+     acoustics/tests/test01/frog_round.json \
+     --host 255.255.255.255 \
+     --port 9000 \
+     --bundle-spacing 0.05 \
+     --lead-time 6 \
+     --target-map acoustics/tests/test01/targets.json \
+     --osc-config acoustics/secrets/osc_config.json
+   ```
+   - GUI から送る場合は `/api/timeline/send` を利用し、結果は `logs/gui_audit.jsonl` と WebSocket push (`sendlog`) に記録される。
+
+5. **後処理**
+   - `acoustics/logs/heartbeat_YYYYMMDD.csv` をアーカイブし、サマリのみ `logs/` 直下へコピー。
+   - `acoustics/state/devices.json` の変更を確認し、ルート `state/devices.json` に反映。
+   - 必要なら `logs/gui_audit.jsonl`、`logs/gui_dashboard_metrics.jsonl` を日付別ファイルにローテート。
+
 ---
 
 ## 7. 30 台 toio 運用フロー（例）
@@ -203,4 +301,3 @@ GUI からできること:
 - toio 側ロコモーションを自動化する場合は、音響タイムラインと toio パス計画を 1 つの JSON にまとめ、GUI から同時配信する設計を検討する。
 
 この Runbook を起点に、セットアップ～大量運用の流れを関係者へ共有し、状態ファイル／ログの所在を揃えていくことが安定運用への近道となる。
-

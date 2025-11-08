@@ -1,0 +1,78 @@
+{
+  "version": "1.2",
+  "default_lead_time": 8.0,
+  "metadata": {
+    "title": "sample staggered playback",
+    "description": "Sequential playback with 23.0s spacing across 5 device(s), 1 pass(es).",
+    "device_count": 5,
+    "passes": 1,
+    "spacing_seconds": 23.0
+  },
+  "events": [
+    {
+      "offset": 0.0,
+      "address": "/acoustics/play",
+      "targets": [
+        "dev-004b12c48530"
+      ],
+      "args": [
+        "sample",
+        0,
+        1.0,
+        0
+      ]
+    },
+    {
+      "offset": 23.0,
+      "address": "/acoustics/play",
+      "targets": [
+        "dev-004b12c3a838"
+      ],
+      "args": [
+        "sample",
+        0,
+        1.0,
+        0
+      ]
+    },
+    {
+      "offset": 46.0,
+      "address": "/acoustics/play",
+      "targets": [
+        "dev-004b12c3c510"
+      ],
+      "args": [
+        "sample",
+        0,
+        1.0,
+        0
+      ]
+    },
+    {
+      "offset": 69.0,
+      "address": "/acoustics/play",
+      "targets": [
+        "dev-004b12c49bb8"
+      ],
+      "args": [
+        "sample",
+        0,
+        1.0,
+        0
+      ]
+    },
+    {
+      "offset": 92.0,
+      "address": "/acoustics/play",
+      "targets": [
+        "dev-004b12c3c2a4"
+      ],
+      "args": [
+        "sample",
+        0,
+        1.0,
+        0
+      ]
+    }
+  ]
+}
