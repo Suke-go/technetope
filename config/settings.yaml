@@ -1,0 +1,19 @@
+camera:
+  width: 640
+  height: 480
+  fps: 30
+
+colors:
+  blue:
+    lower: [100, 50, 50]
+    upper: [130, 255, 255]
+
+paths:
+  data_input: "data/input/"
+  data_output: "data/output/"
+  models: "models/"
+
+point_cloud:
+  voxel_size: 0.01
+  ransac_distance_threshold: 0.03
+  normal_estimation_radius: 0.03
