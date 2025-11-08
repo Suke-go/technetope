@@ -1,0 +1,9 @@
+servers:
+  - id: default
+    host: 127.0.0.1
+    port: 8765
+    endpoint: /ws
+    cubes:
+      - id: demo
+        auto_connect: true
+        auto_subscribe: false

@@ -26,23 +26,23 @@ endif()
 
 find_package(yaml-cpp 0.7 REQUIRED)
 
-add_library(toio_client STATIC
-    src/toio_client.cpp
+add_library(toio_lib STATIC
+    src/transport/toio_client.cpp
     src/middleware/server_session.cpp
     src/middleware/fleet_manager.cpp
 )
-target_include_directories(toio_client
+target_include_directories(toio_lib
     PUBLIC
         include
         ${Boost_INCLUDE_DIRS}
 )
-target_link_libraries(toio_client
+target_link_libraries(toio_lib
     PUBLIC
         nlohmann_json::nlohmann_json
 )
 
 # Boost.System をヘッダオンリーで利用
-target_compile_definitions(toio_client
+target_compile_definitions(toio_lib
     PRIVATE
         BOOST_ERROR_CODE_HEADER_ONLY
         BOOST_SYSTEM_NO_LIB
@@ -51,4 +51,4 @@ target_compile_definitions(toio_client
 add_executable(toio_cli
     src/main.cpp
 )
-target_link_libraries(toio_cli PRIVATE toio_client yaml-cpp::yaml-cpp)
+target_link_libraries(toio_cli PRIVATE toio_lib yaml-cpp::yaml-cpp)

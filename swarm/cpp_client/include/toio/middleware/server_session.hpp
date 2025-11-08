@@ -12,7 +12,7 @@
 
 #include <nlohmann/json.hpp>
 
-namespace toio::client {
+namespace toio::transport {
 class ToioClient;
 }
 
@@ -79,7 +79,7 @@ private:
                     const std::function<void(CubeState &)> &mutator);
 
   ServerConfig config_;
-  std::unique_ptr<client::ToioClient> client_;
+  std::unique_ptr<transport::ToioClient> client_;
   StateCallback state_callback_;
   MessageCallback message_callback_;
 

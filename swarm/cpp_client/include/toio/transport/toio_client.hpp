@@ -12,7 +12,7 @@
 #include <boost/beast/websocket.hpp>
 #include <nlohmann/json.hpp>
 
-namespace toio::client {
+namespace toio::transport {
 
 class ToioClient {
 public:
@@ -85,4 +85,4 @@ private:
   LogHandler log_handler_;
 };
 
-} // namespace toio::client
+} // namespace toio::transport

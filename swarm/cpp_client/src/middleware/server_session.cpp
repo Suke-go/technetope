@@ -1,6 +1,6 @@
 #include "toio/middleware/server_session.hpp"
 
-#include "toio/client/toio_client.hpp"
+#include "toio/transport/toio_client.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -95,7 +95,7 @@ Position parse_position(const nlohmann::json &position_json) {
 
 ServerSession::ServerSession(ServerConfig config)
     : config_(std::move(config)),
-      client_(std::make_unique<client::ToioClient>(
+      client_(std::make_unique<transport::ToioClient>(
           config_.host, config_.port, config_.endpoint)) {
   client_->set_message_handler(
       [this](const nlohmann::json &json) { handle_message(json); });

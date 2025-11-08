@@ -6,19 +6,19 @@ servers:
     endpoint: /ws
     default_require_result: true  # 省略時は false
     cubes:
-      - id: 534
+      - id: j2T
         auto_connect: true
         initial_led: [0, 100, 0]
-      - id: p84
+      - id: R2n
         auto_connect: true
         initial_led: [30, 100, 0]
       - id: d1i
         auto_connect: true
         initial_led: [0, 0, 100]
-      - id: 38t
+      - id: h09
         auto_connect: true
         initial_led: [100, 0, 100]
-      - id : d8J
+      - id : J9r
         auto_connect: true
         initial_led: [0, 100, 100]
   - id: 5b-01

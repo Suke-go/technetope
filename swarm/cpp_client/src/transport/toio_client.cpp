@@ -1,11 +1,11 @@
-#include "toio/client/toio_client.hpp"
+#include "toio/transport/toio_client.hpp"
 
 #include <iostream>
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
-namespace toio::client {
+namespace toio::transport {
 
 namespace {
 namespace beast = boost::beast;
@@ -224,4 +224,4 @@ void ToioClient::log(const std::string &message) const {
   }
 }
 
-} // namespace toio::client
+} // namespace toio::transport

@@ -1,6 +1,6 @@
 # Toio C++ Client
 
-シンプルな CLI から Toio 中継サーバーへ WebSocket で接続し、コマンド／クエリ／通知購読を行うクライアントです。`DESIGN.md` にある方針をそのまま形にした実装になっています。
+シンプルな CLI から Toio 中継サーバーへ WebSocket で接続し、コマンド／クエリ／通知購読を行うクライアントです。全体設計は `docs/transport.md` / `docs/middleware.md` / `docs/cli.md` に記載しています。
 
 ## 必要要件
 - C++20 対応コンパイラ (clang++ 15 以降推奨)
@@ -17,10 +17,11 @@ cmake --build build
 
 ### 実行例
 ```bash
-./build/toio_cli --id F3H --host 127.0.0.1 --port 8765 --subscribe
+./build/toio_cli --fleet-config configs/fleet.yaml
 ```
 
-複数 Cube を同時に扱う場合は `--id` を複数回指定します。
+従来の単一サーバーモードもサポートしており、`--id` を複数指定すると
+その場で `fleet.yaml` 相当の構成が生成されます。
 
 ```bash
 ./build/toio_cli --id 56f --id j2T --host 127.0.0.1 --port 8765
@@ -50,3 +51,42 @@ exit            # 終了
 ```
 
 受信した `result` / `response` / `system` / `error` は JSON 文字列として標準出力に表示され、ターゲットがある場合は `[RECV][CubeID] {...}` の形式になります。
+
+## アーキテクチャ概要
+
+```
+┌─────────────────────────────────────────────┐
+│                 CLI (main.cpp)              │
+│  - 引数解析 / REPL                          │
+│  - FleetManager API へのコマンド委譲        │
+│  - status/batteryall などの集約表示         │
+└───────────────────┬─────────────────────────┘
+                    │
+┌───────────────────▼─────────────────────────┐
+│   Middleware (FleetManager / ServerSession) │
+│  - server_id/cube_id の管理                 │
+│  - 状態スナップショット (CubeState)         │
+│  - 受信 JSON -> リアルタイム反映            │
+└───────────────────┬─────────────────────────┘
+                    │
+┌───────────────────▼─────────────────────────┐
+│        Transport (ToioClient)               │
+│  - Boost.Asio/Beast による WebSocket 接続   │
+│  - JSON コマンド/クエリの送受信             │
+│  - メッセージ/ログハンドラの提供           │
+└───────────────────┬─────────────────────────┘
+                    │
+            Toio Relay Server (/ws)
+
+静的ライブラリ `toio_lib` は Transport + Middleware レイヤーをまとめたもので、CLI を含むアプリケーションから再利用できます。
+```
+
+- `ToioClient` が単一サーバーへの WebSocket を張り、`ServerSession` がサーバー単位の複数 Cube を束ねます。
+- `FleetManager` は複数の ServerSession を保持し、CLI からの `moveall`/`posall` などの一括操作を提供します。
+- 到着した `response(info=="position")` や `result(cmd=="connect")` は `CubeState` に即時反映され、`status` コマンドで確認できます。
+
+## 詳細ドキュメント
+- Transport (ToioClient の通信仕様・メッセージモデル): `docs/transport.md`
+- Middleware (FleetManager / ServerSession / YAML 設定): `docs/middleware.md`
+- CLI (起動方法・REPL コマンド): `docs/cli.md`
+- Coding Guidelines (アーキテクチャ/スタイル規約): `docs/coding_guidelines.md`
