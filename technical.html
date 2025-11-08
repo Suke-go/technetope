@@ -1,210 +1,210 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Technical　Ingenuity - Technetope</title>
-    <link rel="preload" as="image" href="https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_cloud.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Single+Ink:wght@100..900&display=swap" rel="stylesheet">
-    <style>
-        body {
-            opacity: 0;
-            transition: opacity 0.8s ease-in;
-        }
-        body.loaded { opacity: 1; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Hiragino Mincho ProN', 'ヒラギノ明朝 ProN', 'Yu Mincho', '游明朝', 'Times New Roman', serif;
-            background-color: #ffffff;
-            background-image: url('https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_cloud.png');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
-            color: #ffffff;
-            line-height: 1.9;
-            padding: 40px 20px;
-            position: relative;
-        }
-        .ripple-container {
-            position: fixed; top: 50%; left: 50%;
-            width: 0; height: 0; pointer-events: none; z-index: 5;
-        }
-        .ripple {
-            position: absolute; border: 0.01px solid #000000;
-            border-radius: 50%; opacity: 0;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-        }
-        .ripple1 { width: 100px; height: 100px; animation: rippleEffect 2s ease-out; }
-        .ripple2 { width: 100px; height: 100px; animation: rippleEffect 2s ease-out 0.2s; }
-        .ripple3 { width: 100px; height: 100px; animation: rippleEffect 2s ease-out 0.4s; }
-        .ripple4 { width: 100px; height: 100px; animation: rippleEffect 2s ease-out 0.6s; }
-        .ripple5 { width: 100px; height: 100px; animation: rippleEffect 2s ease-out 0.8s; }
-        @keyframes rippleEffect {
-            0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
-            30% { opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(15); opacity: 0; }
-        }
-        body::before {
-            content: ''; position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); pointer-events: none; opacity: 0;
-            animation: overlayFadeIn 0.8s ease-in 1.5s forwards; z-index: 10;
-        }
-        body > * { position: relative; z-index: 100; }
-        @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        body::after {
-            content: ''; position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.15); pointer-events: none;
-            z-index: 1; opacity: 0;
-            animation: fadeInOverlay 0.8s ease-in 1.5s forwards;
-        }
-        @keyframes fadeInOverlay { to { opacity: 1; } }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Technical Ingenuity - Technetope</title>
+  <link rel="preload" as="image" href="https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_cloud.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Single+Ink:wght@100..900&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Single+Ink:wght@100..900&family=DotGothic16&display=swap" rel="stylesheet">
+  
+  <style>
+    :root{
+      --max-width: 820px;
+      --pad-inline: 20px;
+      --pad-block: 40px;
+      --pad-left-desktop: 80px; /* 左余白（デスクトップ） */
+      --line-height: 1.9;
+      --h1-size: 2.2rem;
+      --h2-size: 1.3rem;
+      --text-size: 0.95rem;
+    }
 
-        .logo, .container { position: relative; z-index: 10; }
-        .logo {
-            position: fixed; top: 30px; left: 30px; z-index: 100;
-        }
-        .logo a {
-            font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
-            font-size: 1.5em; color: #000000; text-decoration: none;
-            letter-spacing: 0.1em; font-weight: 300; transition: opacity 0.3s;
-        }
-        .logo a:hover { opacity: 0.6; }
-        .container {
-            max-width: 700px; margin: 0; margin-left: 80px;
-            padding: 80px 40px 40px 40px;
-        }
+    body{ opacity:0; transition:opacity .8s ease-in; }
+    body.loaded{ opacity:1; }
+    *{ margin:0; padding:0; box-sizing:border-box; }
 
-        h1 {
-            font-size: 2em; margin-bottom: 60px; margin-top: 60px;
-            font-weight: 400; letter-spacing: 0.05em;
-            background: linear-gradient(to right, rgba(0, 0, 0, 0.6) 50%, transparent 50%);
-            background-size: 200% 100%; background-position: 100% 0;
-            padding: 8px 15px; display: inline-block;
-            animation: typewriterMarker 0.8s ease-out 2s forwards;
-            font-family: 'Bitcount Grid Single Ink', monospace; color: #fff;
-        }
-        h1 span {
-            display: inline-block; transition: all 0.6s ease;
-            font-family: 'Bitcount Grid Single Ink', monospace;
-        }
-        h1 span.serif {
-            font-family: "游明朝体", "Yu Mincho", "Hiragino Mincho ProN", serif;
-            transform: scale(1.05);
-        }
+    body{
+      font-family:'Hiragino Mincho ProN','ヒラギノ明朝 ProN','Yu Mincho','游明朝','Times New Roman',serif;
+      background-color:#ffffff;
+      background-image:url('https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_cloud.png');
+      background-size:cover;
+      background-position:center;
+      background-attachment:fixed; /* デスクトップ */
+      background-repeat:no-repeat;
+      color:#ffffff;
+      line-height:var(--line-height);
+      position:relative;
+      /* 本文余白（左余白を広めに） */
+      padding:var(--pad-block) var(--pad-inline) var(--pad-block) var(--pad-left-desktop);
+      display:block;
+    }
 
-        @keyframes typewriterMarker {
-            from { background-position: 100% 0; }
-            to { background-position: 0% 0; }
-        }
+    /* リップル/オーバレイ */
+    .ripple-container{ position:fixed; inset:auto; top:50%; left:50%; width:0; height:0; pointer-events:none; z-index:5; }
+    .ripple{ position:absolute; border:.01px solid #000; border-radius:50%; opacity:0; top:50%; left:50%; transform:translate(-50%,-50%); }
+    .ripple1{ width:100px; height:100px; animation:rippleEffect 2s ease-out; }
+    .ripple2{ width:100px; height:100px; animation:rippleEffect 2s ease-out .2s; }
+    .ripple3{ width:100px; height:100px; animation:rippleEffect 2s ease-out .4s; }
+    .ripple4{ width:100px; height:100px; animation:rippleEffect 2s ease-out .6s; }
+    .ripple5{ width:100px; height:100px; animation:rippleEffect 2s ease-out .8s; }
+    @keyframes rippleEffect{ 0%{ transform:translate(-50%,-50%) scale(.1); opacity:0 } 30%{ opacity:1 } 100%{ transform:translate(-50%,-50%) scale(15); opacity:0 } }
 
-        .section {
-            margin-bottom: 50px;
-            padding-left: 30px;
-            border-left: 2px solid rgba(255, 255, 255, 0.3);
-        }
-        h2 {
-            font-size: 1.3em; margin-bottom: 20px; font-weight: 500; letter-spacing: 0.03em;
-            background: linear-gradient(to right, rgba(0, 0, 0, 0.6) 50%, transparent 50%);
-            background-size: 200% 100%; background-position: 100% 0;
-            padding: 8px 15px; display: inline-block;
-            animation: typewriterMarker 0.6s ease-out 2.2s forwards;
-        }
-        p {
-            margin-bottom: 15px; font-size: 0.95em; line-height: 2; text-align: justify;
-            background: linear-gradient(to right, rgba(0, 0, 0, 0.6) 50%, transparent 50%);
-            background-size: 200% 100%; background-position: 100% 0;
-            padding: 10px 15px; animation: typewriterMarker 0.8s ease-out 2.4s forwards;
-        }
-        ul {
-            list-style: none; margin-top: 15px;
-            background: linear-gradient(to right, rgba(0, 0, 0, 0.6) 50%, transparent 50%);
-            background-size: 200% 100%; background-position: 100% 0;
-            padding: 10px 15px; animation: typewriterMarker 0.8s ease-out 2.6s forwards;
-        }
-        li {
-            padding-left: 20px; position: relative; margin-bottom: 10px; font-size: 0.95em;
-        }
-        li::before { content: '—'; position: absolute; left: 0; color: #e0e0e0; }
-    </style>
+    body::before{ content:''; position:fixed; inset:0; background:rgba(0,0,0,.6); pointer-events:none; opacity:0; animation:overlayFadeIn .8s ease-in 1.5s forwards; z-index:10; }
+    body > *{ position:relative; z-index:100; }
+    @keyframes overlayFadeIn{ from{opacity:0} to{opacity:1} }
+    body::after{ content:''; position:fixed; inset:0; background:rgba(255,255,255,.15); pointer-events:none; z-index:1; opacity:0; animation:fadeInOverlay .8s ease-in 1.5s forwards; }
+    @keyframes fadeInOverlay{ to{ opacity:1 } }
+
+    .logo,.container{ position:relative; z-index:10; }
+    .logo{ position:fixed; top:30px; left:30px; z-index:100; }
+    .logo a{ font-family:'Yu Mincho',serif; font-size:1.5em; color:#000; text-decoration:none; letter-spacing:.1em; font-weight:300; transition:opacity .3s; }
+    .logo a:hover{ opacity:.6; }
+
+    .container{ max-width:var(--max-width); margin:0; margin-left:80px; padding:80px 40px 40px; }
+
+    h1{ font-family:'Bitcount Grid Single Ink',monospace; font-size:var(--h1-size); margin:60px 0 60px; font-weight:400; letter-spacing:.05em; color:#fff; display:inline-block; padding:8px 15px; background:linear-gradient(to right, rgba(0,0,0,.6) 50%, transparent 50%); background-size:200% 100%; background-position:100% 0; animation:typewriterMarker .8s ease-out 2s forwards; }
+    h1 span{ display:inline-block; transition:all .6s ease; font-family:'Bitcount Grid Single Ink',monospace; }
+    h1 span.serif{ font-family:"Yu Mincho","Hiragino Mincho ProN",serif; transform:scale(1.05); }
+
+
+
+
+    
+
+    .section{ margin-bottom:50px; padding-left:30px; border-left:2px solid rgba(255,255,255,.3); }
+
+    h2 { font-size: var(--h2-size); margin-bottom: 25px; font-weight: 400; letter-spacing: 0.03em; padding: 8px 15px; display: inline-block; font-family: "DotGothic16", sans-serif; color: #fff; }
+    h2 span { display: inline-block; transition: all 0.6s ease; font-family: "DotGothic16", sans-serif; }
+    h2 span.serif { font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; transform: scale(1.05); }
+    
+    p{ margin-bottom:15px; font-size:var(--text-size); line-height:2; text-align:justify; padding:10px 15px; background:linear-gradient(to right, rgba(0,0,0,.6) 50%, transparent 50%); background-size:200% 100%; background-position:100% 0; animation:typewriterMarker .8s ease-out 2.4s forwards; }
+
+    ul{ list-style:none; margin-top:15px; padding:10px 15px; background:linear-gradient(to right, rgba(0,0,0,.6) 50%, transparent 50%); background-size:200% 100%; background-position:100% 0; animation:typewriterMarker .8s ease-out 2.6s forwards; }
+    li{ padding-left:20px; position:relative; margin-bottom:10px; font-size:var(--text-size); }
+    li::before{ content:'—'; position:absolute; left:0; color:#e0e0e0; }
+
+    /* ===== モバイル最適化（クラスで切替） ===== */
+    body.is-mobile{ background-attachment:scroll; /* iOSパフォーマンス対策 */ padding:20px 16px; }
+    .is-mobile .logo{ position:static; margin-bottom:8px; }
+    .is-mobile .logo a{ color:#111; }
+    .is-mobile .container{ margin:0 auto; padding:24px 0 16px; max-width:640px; }
+    .is-mobile h1{ --h1-size:1.8rem; margin:32px 0 24px; letter-spacing:.03em; }
+    .is-mobile .section{ margin-bottom:36px; padding-left:14px; border-left-width:1px; }
+    .is-mobile h2{ --h2-size:1.15rem; }
+    .is-mobile p, .is-mobile li{ --text-size:0.98rem; }
+
+    /* タブレット補正 */
+    @media (max-width: 1024px){
+      body{ padding:32px 20px; }
+      .container{ margin-left:40px; padding:56px 24px 28px; }
+      h1{ margin:48px 0 40px; }
+    }
+
+    /* スマホ幅の保険（JSのクラス付与に加えて） */
+    @media (max-width: 768px){
+      body{ padding:20px 16px; }
+      .container{ margin:0; padding:24px 0 16px; }
+      h1{ font-size:2rem; margin:32px 0 24px; }
+      h2{ font-size:1.15rem; }
+    }
+  </style>
 </head>
 <body>
-    <div class="ripple-container">
-        <div class="ripple ripple1"></div>
-        <div class="ripple ripple2"></div>
-        <div class="ripple ripple3"></div>
-        <div class="ripple ripple4"></div>
-        <div class="ripple ripple5"></div>
-    </div>
-    
-    <div class="logo">
-        <a href="index.html">Technetope</a>
-    </div>
-    
-    <div class="container">
-        <h1>Technical　Ingenuity</h1>
-        
-        <div class="section">
-            <h2>Toio魔改造</h2>
-            <p>小型可動スピーカーとしてToioを改造し、群れとして動作するシステムを構築。各Toioは独立して動作しながらも、全体として有機的な群れの振る舞いを実現している。改造によって音響出力機能を追加し、移動と音の発生を同時に制御することで、視覚と聴覚の両面から生態系を表現する。</p>
-        </div>
-        
-        <div class="section">
-            <h2>音響制御</h2>
-            <p>各スピーカーが個別に音を発しながら、全体として調和のとれた音響空間を創出。30台のスピーカーが空間内を移動することで、音源の位置が常に変化し、観客を取り囲む立体的な音響体験を生み出す。群れの密度や動きに応じて音響パターンも変化し、生態系の状態を聴覚的に表現する。</p>
-        </div>
-        
-        <div class="section">
-            <h2>Toioの制御</h2>
-            <p>複数のToioを協調制御し、群れとしての振る舞いを実現。各Toioは自身の位置情報と周囲のToioの位置を認識し、群れアルゴリズムに基づいて移動方向を決定する。この分散制御システムにより、中央集権的な制御なしに、自律的で有機的な群れの動きを創出している。</p>
-        </div>
-        
-        <div class="section">
-            <h2>群れの動作</h2>
-            <p>人間の座標を信号として送ることで、群として動くToioたちは自分自身の座標を認識し、その座標で回避行動を取り大きかった群は小さな群に分かれる。しかし再び近くに来るタイミングがあればその群たちは再び繋がり群となる。このダイナミックな分離と統合のプロセスは、自然界の生物の群れ行動を模倣している。観客の存在は障害物として認識され、群れはそれを避けながらも、常に全体としての調和を保とうとする。</p>
-        </div>
-        
-        <div class="section">
-            <h2>視覚表現</h2>
-            <p>水面だけでなく4つのテーマにあった情景が映し出される。各テーマは異なる生態系を表現し、それぞれに適した視覚的・音響的環境を提供する。</p>
-            <ul>
-                <li>メダカ × 湖畔:静かな水面に映る光の揺らぎと、小さな生命の営み</li>
-                <li>イナゴ × 草原:風に揺れる草と、大地を覆う群れの躍動</li>
-                <li>鴨 × 秋空:広がる空と、季節の移ろいの中を渡る鳥たち</li>
-                <li>星 × 夜空:無限の宇宙空間に浮かぶ星々の静謐な運動</li>
-            </ul>
-        </div>
-    </div>
-    
-    <script>
-        const bgImage = new Image();
-        bgImage.src = 'https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_cloud.png';
-        bgImage.onload = () => document.body.classList.add('loaded');
-        bgImage.onerror = () => document.body.classList.add('loaded');
+  <div class="ripple-container" aria-hidden="true">
+    <div class="ripple ripple1"></div>
+    <div class="ripple ripple2"></div>
+    <div class="ripple ripple3"></div>
+    <div class="ripple ripple4"></div>
+    <div class="ripple ripple5"></div>
+  </div>
 
-        const h1 = document.querySelector("h1");
-        const text = h1.textContent.trim();
-        h1.textContent = "";
+  <div class="logo"><a href="index.html">Technetope</a></div>
 
-        const spans = text.split("").map(ch => {
-            const span = document.createElement("span");
-            span.textContent = ch;
-            h1.appendChild(span);
-            return span;
-        });
+  <div class="container">
+    <h1>Technical　Ingenuity</h1>
 
-        setTimeout(() => {
-            const order = spans.map((_, i) => i).sort(() => Math.random() - 0.5);
-            order.forEach((i, index) => {
-                setTimeout(() => {
-                    spans[i].classList.add("serif");
-                }, index * 250 + Math.random() * 300);
-            });
-        }, 1700);
-    </script>
+    <div class="section">
+      <h2>Toio魔改造</h2>
+      <p>小型可動スピーカーとしてToioを改造し、群れとして動作するシステムを構築。各Toioは独立して動作しながらも、全体として有機的な群れの振る舞いを実現している。改造によって音響出力機能を追加し、移動と音の発生を同時に制御することで、視覚と聴覚の両面から生態系を表現する。</p>
+    </div>
+
+    <div class="section">
+      <h2>音響制御</h2>
+      <p>各スピーカーが個別に音を発しながら、全体として調和のとれた音響空間を創出。30台のスピーカーが空間内を移動することで、音源の位置が常に変化し、観客を取り囲む立体的な音響体験を生み出す。群れの密度や動きに応じて音響パターンも変化し、生態系の状態を聴覚的に表現する。</p>
+    </div>
+
+    <div class="section">
+      <h2>Toioの制御</h2>
+      <p>複数のToioを協調制御し、群れとしての振る舞いを実現。各Toioは自身の位置情報と周囲のToioの位置を認識し、群れアルゴリズムに基づいて移動方向を決定する。この分散制御システムにより、中央集権的な制御なしに、自律的で有機的な群れの動きを創出している。</p>
+    </div>
+
+    <div class="section">
+      <h2>群れの動作</h2>
+      <p>人間の座標を信号として送ることで、群として動くToioたちは自分自身の座標を認識し、その座標で回避行動を取り大きかった群は小さな群に分かれる。しかし再び近くに来るタイミングがあればその群たちは再び繋がり群となる。このダイナミックな分離と統合のプロセスは、自然界の生物の群れ行動を模倣している。観客の存在は障害物として認識され、群れはそれを避けながらも、常に全体としての調和を保とうとする。</p>
+    </div>
+
+    <div class="section">
+      <h2>視覚表現</h2>
+      <p>水面だけでなく4つのテーマにあった情景が映し出される。各テーマは異なる生態系を表現し、それぞれに適した視覚的・音響的環境を提供する。</p>
+      <ul>
+        <li>メダカ × 湖畔:静かな水面に映る光の揺らぎと、小さな生命の営み</li>
+        <li>イナゴ × 草原:風に揺れる草と、大地を覆う群れの躍動</li>
+        <li>鴨 × 秋空:広がる空と、季節の移ろいの中を渡る鳥たち</li>
+        <li>星 × 夜空:無限の宇宙空間に浮かぶ星々の静謐な運動</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // ===== 端末識別：UA + ビューポート幅でモバイル推定し、クラスを付与 =====
+    function detectDevice(){
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const isTouchWidth = window.matchMedia('(max-width: 768px)').matches;
+      const isMobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+      const mobile = isTouchWidth || isMobileUA;
+      document.body.classList.toggle('is-mobile', mobile);
+      document.body.classList.toggle('is-desktop', !mobile);
+    }
+    detectDevice();
+    window.addEventListener('resize', ()=>{ clearTimeout(window.__resTO); window.__resTO = setTimeout(detectDevice, 150); });
+
+    // 背景画像プリロード
+    const bgImage = new Image();
+    bgImage.src = 'https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_cloud.png';
+    bgImage.onload = ()=>document.body.classList.add('loaded');
+    bgImage.onerror = ()=>document.body.classList.add('loaded');
+
+    // h1エフェクト Bitcount→明朝
+    const h1 = document.querySelector('h1');
+    const text = h1.textContent.trim();
+    h1.textContent = '';
+    const spans = text.split('').map(ch=>{ const span=document.createElement('span'); span.textContent=ch; h1.appendChild(span); return span; });
+    setTimeout(()=>{
+      const order = spans.map((_,i)=>i).sort(()=>Math.random()-0.5);
+      order.forEach((i,idx)=>{ setTimeout(()=>{ spans[i].classList.add('serif'); }, idx*250 + Math.random()*300); });
+    },1700);
+
+    // h2エフェクト DotGothic16→明朝
+    const h2List = document.querySelectorAll('h2');
+    h2List.forEach((h2, groupIndex) => {
+      const text = h2.textContent.trim();
+      h2.textContent = '';
+      const spans = text.split('').map(ch => {
+        const span = document.createElement('span');
+        span.textContent = ch;
+        h2.appendChild(span);
+        return span;
+      });
+      setTimeout(() => {
+        const order = spans.map((_, i) => i).sort(() => Math.random() - 0.5);
+        order.forEach((i, idx) => { setTimeout(() => { spans[i].classList.add('serif'); }, idx * 200 + Math.random() * 200); });
+      }, 2200 + groupIndex * 600);
+    });
+  </script>
 </body>
 </html>
