@@ -20,6 +20,16 @@
   <title>Technetope</title>
   <link rel="preload" as="image" href="https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_claud3.png">
   <style>
+    :root {
+      --max-width: 900px;
+      --container-pad: 80px 40px;
+      --h1-size: 4rem;
+      --h2-size: 1.5rem;
+      --text-size: 1.05rem;
+      --subtitle-size: 1.1rem;
+      --line-height: 2;
+    }
+
     body {
       opacity: 0;
       transition: opacity 0.8s ease-in;
@@ -33,17 +43,17 @@
       background-image: url('https://raw.githubusercontent.com/Rhizobium-gits/Technetope/main/figure/background_claud3.png');
       background-size: cover;
       background-position: center;
-      background-attachment: fixed;
+      background-attachment: fixed; /* デスクトップ */
       background-repeat: no-repeat;
       color: #e8e8e8;
-      line-height: 2;
+      line-height: var(--line-height);
       overflow-x: hidden;
     }
 
     .container {
-      max-width: 900px;
+      max-width: var(--max-width);
       margin: 0 auto;
-      padding: 80px 40px;
+      padding: var(--container-pad);
       position: relative;
     }
 
@@ -55,7 +65,7 @@
     }
 
     h1 {
-      font-size: 4em;
+      font-size: var(--h1-size);
       font-weight: 300;
       letter-spacing: 0.15em;
       margin-bottom: 20px;
@@ -64,7 +74,7 @@
     }
 
     .subtitle {
-      font-size: 1.1em;
+      font-size: var(--subtitle-size);
       letter-spacing: 0.3em;
       color: #888;
       opacity: 0;
@@ -99,9 +109,21 @@
       animation: fadeIn 2s ease-in 1.5s forwards;
     }
 
-    .video-container iframe {
-      max-width: 100%;
+    /* 埋め込み動画をレスポンシブに */
+    .video-container .video-frame {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      aspect-ratio: 16 / 9;
       border: 1px solid #222;
+    }
+    .video-container iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
     }
 
     .nav-link {
@@ -129,11 +151,11 @@
       opacity: 0;
       animation: fadeInUp 1.5s ease-out forwards;
     }
-    section:nth-child(2) { animation-delay: 1.5s; }
-    section:nth-child(3) { animation-delay: 2s; }
+    section:nth-of-type(2) { animation-delay: 1.5s; }
+    section:nth-of-type(3) { animation-delay: 2s; }
 
     h2 {
-      font-size: 1.5em;
+      font-size: var(--h2-size);
       font-weight: 400;
       letter-spacing: 0.15em;
       margin-bottom: 40px;
@@ -153,7 +175,7 @@
       margin-bottom: 30px;
       text-align: justify;
       text-indent: 1em;
-      font-size: 1.05em;
+      font-size: var(--text-size);
       line-height: 2.2;
     }
     .statement p:first-of-type {
@@ -219,7 +241,7 @@
 
     header h1 {
       font-family: 'Bitcount Grid Single Ink', monospace;
-      font-size: 4rem;
+      font-size: var(--h1-size);
       letter-spacing: 0.1em;
       color: #fff;
       margin: 0;
@@ -234,6 +256,57 @@
     header h1 span.serif {
       font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
       transform: scale(1.05);
+    }
+
+    /* ===== モバイル専用スタイル ===== */
+    body.is-mobile {
+      background-attachment: scroll; /* iOSでの固定背景のパフォーマンス対策 */
+    }
+
+    .is-mobile .container {
+      --max-width: 100%;
+      --container-pad: 32px 20px; /* 余白を小さく */
+    }
+    .is-mobile h1 {
+      --h1-size: 2.4rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+    .is-mobile .subtitle, .is-mobile .theme {
+      --subtitle-size: 1rem;
+      letter-spacing: 0.12em;
+    }
+    .is-mobile header { margin-bottom: 48px; }
+    .is-mobile .video-container { margin-top: 24px; }
+    .is-mobile .nav-link {
+      position: static; /* 上固定をやめる */
+      justify-content: center;
+      margin-bottom: 16px;
+      gap: 12px;
+      font-size: 0.95rem;
+    }
+    .is-mobile .nav-link a { padding: 6px 10px; }
+
+    .is-mobile section { margin-bottom: 64px; }
+    .is-mobile h2 { --h2-size: 1.25rem; margin-bottom: 24px; }
+    .is-mobile .statement p { --text-size: 1rem; line-height: 1.9; text-indent: 0.8em; }
+    .is-mobile .quote-text { padding: 0 12px; }
+
+    /* タブレット向け微調整 */
+    @media (max-width: 1024px) {
+      .container { padding: 64px 28px; }
+      h1 { font-size: 3rem; }
+      .video-container .video-frame { max-width: 100%; }
+      .nav-link { right: 28px; }
+    }
+
+    /* スマホ（幅<=768px）向けの強制調整 */
+    @media (max-width: 768px) {
+      .container { padding: 28px 18px; }
+      header { margin-bottom: 56px; }
+      h1 { font-size: 2.6rem; }
+      .nav-link { position: static; justify-content: center; margin-top: 12px; }
+      .quote-text { padding: 0 12px; }
     }
   </style>
 </head>
@@ -252,7 +325,9 @@
       <div class="subtitle">テクネトープ</div>
       <div class="theme">— 観客は環境の一部である —</div>
       <div class="video-container">
-        <iframe width="800" height="450" src="https://www.youtube.com/embed/UVaZf3GliDs" frameborder="0" allowfullscreen></iframe>
+        <div class="video-frame">
+          <iframe src="https://www.youtube.com/embed/UVaZf3GliDs" title="YouTube video" allowfullscreen></iframe>
+        </div>
       </div>
     </header>
     
@@ -274,6 +349,18 @@
   </div>
 
   <script>
+    // ===== 端末識別：UA＋幅で判定し、クラス付与 =====
+    function detectDevice() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const isTouchWidth = window.matchMedia('(max-width: 768px)').matches;
+      const isMobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+      const mobile = isTouchWidth || isMobileUA;
+      document.body.classList.toggle('is-mobile', mobile);
+      document.body.classList.toggle('is-desktop', !mobile);
+    }
+    detectDevice();
+    window.addEventListener('resize', () => { clearTimeout(window.__resTO); window.__resTO = setTimeout(detectDevice, 150); });
+
     // 背景ドット
     const dotsContainer = document.getElementById('dots');
     const dotCount = 30;
@@ -294,11 +381,11 @@
     bgImage.onerror = () => document.body.classList.add('loaded');
 
     // h1 Bitcount→明朝
-    const h1 = document.querySelector("header h1");
+    const h1 = document.querySelector('header h1');
     const text = h1.textContent.trim();
-    h1.textContent = "";
-    const spans = text.split("").map(ch => {
-      const span = document.createElement("span");
+    h1.textContent = '';
+    const spans = text.split('').map(ch => {
+      const span = document.createElement('span');
       span.textContent = ch;
       h1.appendChild(span);
       return span;
@@ -306,17 +393,17 @@
     setTimeout(() => {
       const order = spans.map((_, i) => i).sort(() => Math.random() - 0.5);
       order.forEach((i, index) => {
-        setTimeout(() => { spans[i].classList.add("serif"); }, index * 250 + Math.random() * 300);
+        setTimeout(() => { spans[i].classList.add('serif'); }, index * 250 + Math.random() * 300);
       });
     }, 1700);
 
     // subtitle と theme の DotGothic16→明朝
-    [".subtitle", ".theme"].forEach((selector, index) => {
+    ['.subtitle', '.theme'].forEach((selector, index) => {
       const element = document.querySelector(selector);
       const text = element.textContent.trim();
-      element.textContent = "";
-      const spans = text.split("").map(ch => {
-        const span = document.createElement("span");
+      element.textContent = '';
+      const spans = text.split('').map(ch => {
+        const span = document.createElement('span');
         span.textContent = ch;
         element.appendChild(span);
         return span;
@@ -324,7 +411,7 @@
       setTimeout(() => {
         const order = spans.map((_, i) => i).sort(() => Math.random() - 0.5);
         order.forEach((i, idx) => {
-          setTimeout(() => { spans[i].classList.add("serif"); }, idx * 180 + Math.random() * 200);
+          setTimeout(() => { spans[i].classList.add('serif'); }, idx * 180 + Math.random() * 200);
         });
       }, 2000 + index * 300);
     });
