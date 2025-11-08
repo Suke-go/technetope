@@ -15,6 +15,11 @@ interface SchedulerArtifacts {
   baseTimeIso: string;
 }
 
+interface PreparedTimeline {
+  events: TimelinePayload["events"];
+  leadSeconds: number;
+}
+
 const MIN_LEAD_SECONDS = 3;
 const AUTO_SHIFT_MAX_DURATION_MS = 15 * 60 * 1000; // only auto-shift short test timelines
 const AUTO_SHIFT_PAST_THRESHOLD_MS = 5 * 1000;
@@ -45,26 +50,21 @@ function ensureUniformLead(events: TimelinePayload["events"]): number {
   return firstLeadSeconds;
 }
 
-function buildSchedulerArtifacts(timeline: TimelinePayload): SchedulerArtifacts {
+function buildSchedulerArtifacts(timeline: TimelinePayload, prepared?: PreparedTimeline): SchedulerArtifacts {
   if (timeline.events.length === 0) {
     throw new Error("Timeline must contain at least one event");
   }
 
-  const sortedEvents = [...timeline.events].sort((a, b) => {
-    return parseIsoToMillis(a.time_utc) - parseIsoToMillis(b.time_utc);
-  });
+  const sortedEvents =
+    prepared?.events ??
+    [...timeline.events].sort((a, b) => {
+      return parseIsoToMillis(a.time_utc) - parseIsoToMillis(b.time_utc);
+    });
 
-  const leadSeconds = ensureUniformLead(sortedEvents);
-  const { events: alignedEvents, shiftMillis } = maybeAutoShiftEvents(sortedEvents, leadSeconds);
-  if (shiftMillis !== 0) {
-    const shiftedSeconds = (shiftMillis / 1000).toFixed(3);
-    console.log(
-      `[TimelineService] auto-shifted timeline ${timeline.timeline_id} by ${shiftedSeconds}s to align with current time`
-    );
-  }
-  const firstEventMillis = parseIsoToMillis(alignedEvents[0].time_utc);
+  const leadSeconds = prepared?.leadSeconds ?? ensureUniformLead(sortedEvents);
+  const firstEventMillis = parseIsoToMillis(sortedEvents[0].time_utc);
 
-  const schedulerEvents = alignedEvents.map((event) => {
+  const schedulerEvents = sortedEvents.map((event) => {
     const eventMillis = parseIsoToMillis(event.time_utc);
     const offsetSeconds = Number(((eventMillis - firstEventMillis) / 1000).toFixed(3));
     const gain = typeof event.gain === "number" ? event.gain : 1.0;
@@ -109,16 +109,18 @@ export class TimelineService extends EventEmitter {
 
   async preview(payload: unknown): Promise<TimelineEvent[]> {
     const parsed = timelineSchema.parse(payload);
-    return this.flattenTimeline(parsed, randomUUID());
+    const { aligned } = alignTimeline(parsed);
+    return this.flattenTimeline(aligned, randomUUID());
   }
 
   async dispatch(payload: unknown, requestId = randomUUID()): Promise<TimelineDispatchResult> {
     const parsed = timelineSchema.parse(payload);
-    const events = this.flattenTimeline(parsed, requestId);
+    const { aligned, prepared } = alignTimeline(parsed);
+    const events = this.flattenTimeline(aligned, requestId);
     this.appendEvents(events);
     this.emitUpdate();
-    await appendJsonl(config.auditLogPath, { type: "timeline_dispatch", requestId, timeline_id: parsed.timeline_id });
-    await this.invokeScheduler(parsed, requestId, events);
+    await appendJsonl(config.auditLogPath, { type: "timeline_dispatch", requestId, timeline_id: aligned.timeline_id });
+    await this.invokeScheduler(aligned, requestId, prepared);
     return { requestId, events };
   }
 
@@ -158,7 +160,11 @@ export class TimelineService extends EventEmitter {
     }));
   }
 
-  private async invokeScheduler(timeline: TimelinePayload, requestId: string): Promise<void> {
+  private async invokeScheduler(
+    timeline: TimelinePayload,
+    requestId: string,
+    prepared?: PreparedTimeline
+  ): Promise<void> {
     if (!fs.existsSync(config.schedulerBinary)) {
       console.warn(`[TimelineService] Scheduler binary not found: ${config.schedulerBinary}`);
       this.markEvents(requestId, "failed");
@@ -167,7 +173,7 @@ export class TimelineService extends EventEmitter {
     }
     let artifacts: SchedulerArtifacts;
     try {
-      artifacts = buildSchedulerArtifacts(timeline);
+      artifacts = buildSchedulerArtifacts(timeline, prepared);
     } catch (error) {
       console.error("[TimelineService] timeline conversion failed:", error);
       this.markEvents(requestId, "failed");
@@ -237,6 +243,39 @@ export class TimelineService extends EventEmitter {
 
 export function createTimelineService(): TimelineService {
   return new TimelineService();
+}
+
+function alignTimeline(
+  timeline: TimelinePayload
+): { aligned: TimelinePayload; prepared: PreparedTimeline } {
+  if (timeline.events.length === 0) {
+    throw new Error("Timeline must contain at least one event");
+  }
+
+  const sortedEvents = [...timeline.events].sort((a, b) => {
+    return parseIsoToMillis(a.time_utc) - parseIsoToMillis(b.time_utc);
+  });
+  const leadSeconds = ensureUniformLead(sortedEvents);
+  const { events: alignedEvents, shiftMillis } = maybeAutoShiftEvents(sortedEvents, leadSeconds);
+  if (shiftMillis !== 0) {
+    const shiftedSeconds = (shiftMillis / 1000).toFixed(3);
+    console.log(
+      `[TimelineService] auto-shifted timeline ${timeline.timeline_id} by ${shiftedSeconds}s to align with current time`
+    );
+  }
+
+  const aligned: TimelinePayload = {
+    ...timeline,
+    events: alignedEvents
+  };
+
+  return {
+    aligned,
+    prepared: {
+      events: alignedEvents,
+      leadSeconds
+    }
+  };
 }
 
 function maybeAutoShiftEvents(

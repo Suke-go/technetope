@@ -31,8 +31,33 @@
     - OSCアドレス設計と型シグネチャは最初に決め、sender/receiver双方で同じテーブルを共有する。後から型を変えたくなった場合は`std::variant`等でバージョン互換レイヤを作り、`const_cast`やCスタイルキャストで無理に読み替えない。
     - 受信処理は専用スレッドやタスクに隔離し、所有権を持つバッファを`std::unique_ptr`やリングバッファで管理する。メインスレッドには`const&`で読み取り用データを渡し、「とりあえず`mutable`」やグローバル変数化は避ける。
     - UDP遅延・順序入れ替わりに備えてタイムタグを常に検査し、想定閾値を超えた場合はログとドロップ処理を行う。挙動が不明瞭なまま推測で最適化せず、`ofGetElapsedTimeMicros()`等で処理時間を測定しボトルネックの有無を判断する。
-    - パースに失敗したパケットはログ化して破棄し、`reinterpret_cast`で黙って読み進めない。解析用のデバッグログを残し、再送要求やフォールバック経路の有無を検討する。
-    - 密集したOSCイベントに対してCPUで逐次波形生成をせず、M5Stick側のI2S/DMAや外部DSPに委譲できないか常に検討する。逆に複雑な状態遷移はCPU側で処理し、GPU/シェーダで無理をしない。
+- パースに失敗したパケットはログ化して破棄し、`reinterpret_cast`で黙って読み進めない。解析用のデバッグログを残し、再送要求やフォールバック経路の有無を検討する。
+- 密集したOSCイベントに対してCPUで逐次波形生成をせず、M5Stick側のI2S/DMAや外部DSPに委譲できないか常に検討する。逆に複雑な状態遷移はCPU側で処理し、GPU/シェーダで無理をしない。
+
+## Logging / State 管理ポリシー（2025-11 現状）
+現行ツールチェーン（`agent_a_monitor`、GUI backend、React dashboard）が参照するログ／状態ファイルを壊さず整理するため、保存先の責務を以下の二層に固定する。
+
+| 種別 | 公式パス | 生成元 / 消費者 | 運用メモ |
+| --- | --- | --- | --- |
+| 永続レジストリ | `state/devices.json`, `state/diagnostics.json` | GUI backend (`acoustics/web/backend/src/config.ts`) と React dashboard | ここを「唯一の真実」とし、`monitor --registry` や backend API でのみ更新。手動編集は最終手段。 |
+| GUI 系ログ | `logs/gui_audit.jsonl`, `logs/gui_dashboard_metrics.jsonl`, `logs/gui_event_log.csv` | `acoustics/web/backend` | JSON Lines 形式。1 日 1 ファイルでローテ（例: `logs/gui_audit_20251107.jsonl`）し、共有サーバへアップロードする場合は gzip 化する。 |
+| デバイス心拍 CSV | `acoustics/logs/heartbeat_*.csv` | `agent_a_monitor` CLI | 計測現場での生ログ置き場。整形後の要約だけを `logs/heartbeat.csv`（ルート）へ同期する。 |
+| 実験用 state | `acoustics/state/devices.json` | テスト / シミュレーション | セッション中の一時ファイル。公式レジストリへ反映済みなら削除可。`state/` へコピーする際は `jq` などで重複IDをマージ。 |
+| 一時ファイル | `build/**/tmp`, `/tmp/timeline-*/` | CMake / scheduler | 実行ごとに生成・削除される。Git には含めない。 |
+
+### 運用ルール
+1. **参照先の一元化**  
+   GUI backend の `config.json` を編集する場合でも、`devicesPath` や `metricsPath` は必ずルート `state/` / `logs/` を指す相対パスに揃える（例: `"devicesPath": "../../state/devices.json"`）。絶対パスの混入を避ける。
+2. **CLI 出力の命名規則**  
+   `agent_a_monitor --csv acoustics/logs/heartbeat_YYYYMMDD.csv --registry acoustics/state/devices.json` のように日付入りファイル名を使う。解析後に必要な統計のみを `logs/` 配下へコピーし、生ログはアーカイブする。
+3. **GUI ログの健全化**  
+   `logs/gui_audit.jsonl` は 1 行 1 イベントの JSON とし、壊れた行を見つけたら同日ファイルを `_corrupt` サフィックスで退避してから修復する。`timeline_dispatch` と `scheduler_exec` のような粒度を維持する。
+4. **状態ファイルのマージ手順**  
+   同じ `device_id` が複数ファイルに存在する場合は `last_seen` が新しいものを優先し、`jq -s 'reduce .[] as $item ({}; .[$item.id] = ($item)) | [.[]]'` のようなスクリプトで衝突を解消する。
+5. **秘匿情報をログへ出さない**  
+   `acoustics/secrets/osc_config.json` や `Secrets.h` の SSID/鍵をログへ書き出さない。CLI/GUI のログレベルを `INFO` 以下にする際も、Wi-Fi 設定や AES キーは伏せ字にする。
+
+まずはこのルールを共有し、物理ファイルの移動や削除は監視しているプロセスと `config.*` の参照先を確認してから実施する。採取済みログを破壊せず整理するには「公式パス」「一時パス」を明文化することが最優先となる。
 
 ## OSC Timetag Synchrony Concept
 - **目的（ゴール）**: 30台のM5StickC Plus2が「同じタイミングで同じ音を鳴らす」ことを実現する。Wi-Fi特有の通信遅延があっても、体感的に同時に聞こえるレベルまでズレを抑える。
