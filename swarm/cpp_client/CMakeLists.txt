@@ -30,6 +30,9 @@ add_library(toio_lib STATIC
     src/transport/toio_client.cpp
     src/middleware/server_session.cpp
     src/middleware/fleet_manager.cpp
+    src/control/goal_controller.cpp
+    src/api/fleet_control.cpp
+    src/cli/config_loader.cpp
 )
 target_include_directories(toio_lib
     PUBLIC
@@ -39,6 +42,7 @@ target_include_directories(toio_lib
 target_link_libraries(toio_lib
     PUBLIC
         nlohmann_json::nlohmann_json
+        yaml-cpp::yaml-cpp
 )
 
 # Boost.System をヘッダオンリーで利用
@@ -50,7 +54,15 @@ target_compile_definitions(toio_lib
 
 add_executable(toio_cli
     src/main.cpp
-    src/cli/config_loader.cpp
-    src/control/goal_controller.cpp
 )
-target_link_libraries(toio_cli PRIVATE toio_lib yaml-cpp::yaml-cpp)
+target_link_libraries(toio_cli PRIVATE toio_lib)
+
+add_executable(fleet_control_sample
+    samples/fleet_control_sample.cpp
+)
+target_link_libraries(fleet_control_sample PRIVATE toio_lib)
+
+add_executable(circle_motion_sample
+    samples/circle_motion_sample.cpp
+)
+target_link_libraries(circle_motion_sample PRIVATE toio_lib)

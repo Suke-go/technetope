@@ -6,18 +6,21 @@ servers:
     endpoint: /ws
     default_require_result: true  # 省略時は false
     cubes:
-      - id: Q7B
+      - id: j2T
+      - id: p84
   - id: 5b-01
     host: 5b-01.local
     port: 8765
     endpoint: /ws
     default_require_result: true  # 省略時は false
     cubes:
-      - id: 38t
+      - id: d8J
+      - id: 56f
   - id: 5b-02
     host: 5b-02.local
     port: 8765
     endpoint: /ws
     default_require_result: true  # 省略時は false
     cubes:
-      - id: p2K
+      - id: M1F
+      - id: N2H

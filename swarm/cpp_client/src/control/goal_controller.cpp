@@ -125,9 +125,16 @@ GoalController::find_cube_state(const std::string &server_id,
 void GoalController::run_goal_task(
     const std::string &server_id,
     const std::string &cube_id,
-    GoalOptions options,
+    std::shared_ptr<SharedGoal> shared_goal,
     std::shared_ptr<std::atomic<bool>> cancel_flag) {
   const std::string key = make_key(server_id, cube_id);
+
+  auto copy_goal = [&shared_goal]() {
+    std::lock_guard<std::mutex> lock(shared_goal->mutex);
+    return shared_goal->options;
+  };
+
+  auto options = copy_goal();
 
   auto wait_for_connection = [&]() {
     const auto deadline =
@@ -170,6 +177,7 @@ void GoalController::run_goal_task(
     double direction_state = 1.0;
 
     while (!cancel_flag->load()) {
+      options = copy_goal();
       auto state = find_cube_state(server_id, cube_id);
       if (!state) {
         log(key, "cube disappeared from manager state");
@@ -183,8 +191,14 @@ void GoalController::run_goal_task(
       auto speeds =
           compute_goal_move(*state->position, options, direction_state);
       if (!speeds) {
-        reached_goal = true;
-        break;
+        if (shared_goal->auto_stop_on_goal.load()) {
+          reached_goal = true;
+          break;
+        }
+        manager_.move(server_id, cube_id, 0, 0, false);
+        manager_.query_position(server_id, cube_id, false);
+        std::this_thread::sleep_for(options.poll_interval);
+        continue;
       }
       manager_.move(server_id, cube_id, speeds->first, speeds->second, false);
       manager_.query_position(server_id, cube_id, false);
@@ -210,21 +224,54 @@ bool GoalController::start_goal(const std::string &server_id,
   const std::string key = make_key(server_id, cube_id);
   stop_goal(server_id, cube_id);
 
+  auto shared_goal = std::make_shared<SharedGoal>();
+  {
+    std::lock_guard<std::mutex> lock(shared_goal->mutex);
+    shared_goal->options = std::move(options);
+    shared_goal->auto_stop_on_goal.store(true);
+  }
   auto cancel_flag = std::make_shared<std::atomic<bool>>(false);
   auto worker = std::async(std::launch::async,
                            [this,
                             server_id,
                             cube_id,
-                            options,
+                            shared_goal,
                             cancel_flag]() {
                              run_goal_task(server_id,
                                            cube_id,
-                                           options,
+                                           shared_goal,
                                            cancel_flag);
                            });
 
   std::lock_guard<std::mutex> lock(tasks_mutex_);
-  tasks_.emplace(key, GoalTask{options, std::move(cancel_flag), std::move(worker)});
+  tasks_.emplace(key,
+                 GoalTask{std::move(shared_goal),
+                          std::move(cancel_flag),
+                          std::move(worker)});
+  return true;
+}
+
+bool GoalController::update_goal(const std::string &server_id,
+                                 const std::string &cube_id,
+                                 GoalOptions options) {
+  const std::string key = make_key(server_id, cube_id);
+  std::shared_ptr<SharedGoal> shared_goal;
+  {
+    std::lock_guard<std::mutex> lock(tasks_mutex_);
+    auto it = tasks_.find(key);
+    if (it == tasks_.end()) {
+      return false;
+    }
+    shared_goal = it->second.shared_goal;
+  }
+  {
+    std::lock_guard<std::mutex> goal_lock(shared_goal->mutex);
+    shared_goal->options = options;
+  }
+  shared_goal->auto_stop_on_goal.store(false);
+  log(key,
+      "goal updated to (" + std::to_string(options.goal_x) + ", " +
+          std::to_string(options.goal_y) + ")");
   return true;
 }
 

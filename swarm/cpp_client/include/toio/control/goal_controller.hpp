@@ -20,7 +20,7 @@ struct GoalOptions {
   double vmax = 90.0;
   double wmax = 70.0;
   double k_r = 0.8;
-  double k_a = 0.6;
+  double k_a = 0.4;
   double stop_dist = 10.0;
   double reverse_threshold_deg = 100.0;
   double reverse_hysteresis_deg = 15.0;
@@ -43,6 +43,9 @@ public:
   bool start_goal(const std::string &server_id,
                   const std::string &cube_id,
                   GoalOptions options = {});
+  bool update_goal(const std::string &server_id,
+                   const std::string &cube_id,
+                   GoalOptions options);
 
   bool stop_goal(const std::string &server_id, const std::string &cube_id);
   std::size_t stop_all();
@@ -50,8 +53,14 @@ public:
                 const std::string &cube_id) const;
 
 private:
-  struct GoalTask {
+  struct SharedGoal {
     GoalOptions options;
+    mutable std::mutex mutex;
+    std::atomic<bool> auto_stop_on_goal{true};
+  };
+
+  struct GoalTask {
+    std::shared_ptr<SharedGoal> shared_goal;
     std::shared_ptr<std::atomic<bool>> cancel_flag;
     std::future<void> worker;
   };
@@ -74,7 +83,7 @@ private:
 
   void run_goal_task(const std::string &server_id,
                      const std::string &cube_id,
-                     GoalOptions options,
+                     std::shared_ptr<SharedGoal> shared_goal,
                      std::shared_ptr<std::atomic<bool>> cancel_flag);
 };
 
