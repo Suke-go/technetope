@@ -71,9 +71,9 @@ servers:
 - `host`/`port`/`endpoint`: ToioClient 接続先。
 - `default_require_result`: 省略時 false。コマンド送信時の `require_result` 既定値。
 - `cubes[]`: サーバー配下の Cube 列挙。
-  - `auto_connect`: 起動直後に `connect_cube` を呼ぶか。
-  - `auto_subscribe`: 起動直後に `query_position(..., true)` を送るか。
-  - `initial_led`: `[R,G,B]` (0-255)。接続確認に使える任意フィールド。
+  - `auto_connect`: 起動直後に `connect_cube` を呼ぶか（省略時 true）。
+  - `auto_subscribe`: 起動直後に `query_position(..., true)` を送るか（省略時 true）。
+  - `initial_led`: `[R,G,B]` (0-255)。接続確認に使える任意フィールド。省略時は 0-255 のランダムな RGB が自動で設定される。
 
 ### CLI での利用
 - `./toio_cli --fleet-config configs/fleet.yaml` で YAML を読み込み、複数サーバーを同時制御。

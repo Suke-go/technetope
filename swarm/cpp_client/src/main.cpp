@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <iostream>
 #include <optional>
+#include <random>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -47,12 +48,22 @@ struct FleetGuard {
   }
 };
 
+LedColor random_led_color() {
+  static std::mt19937 rng(std::random_device{}());
+  static std::uniform_int_distribution<int> dist(0, 255);
+  LedColor color;
+  color.r = static_cast<std::uint8_t>(dist(rng));
+  color.g = static_cast<std::uint8_t>(dist(rng));
+  color.b = static_cast<std::uint8_t>(dist(rng));
+  return color;
+}
+
 void print_usage(const char *argv0) {
   std::cout << "Usage: " << argv0
             << " --fleet-config <fleet.yaml>\n";
 }
 
-std::vector<std::string> tokenize(const std::string &line) {
+std::vector<std::string> tokenize(const std::string &line) { // tokenの配列(std::vector<std::string>)を返す
   std::istringstream iss(line);
   std::vector<std::string> tokens;
   std::string token;
@@ -66,7 +77,7 @@ int to_int(const std::string &value) {
   return std::stoi(value);
 }
 
-Options parse_options(int argc, char **argv) {
+Options parse_options(int argc, char **argv) { // コマンドライン引数の解析
   Options opt;
   bool has_config = false;
   for (int i = 1; i < argc; ++i) {
@@ -90,7 +101,7 @@ Options parse_options(int argc, char **argv) {
 }
 
 template <typename T>
-T scalar_or_throw(const YAML::Node &node, const std::string &field) {
+T scalar_or_throw(const YAML::Node &node, const std::string &field) { //YAMLノードからスカラー値を取得するユーティリティ関数
   if (!node || !node.IsScalar()) {
     throw std::runtime_error("Field '" + field + "' must be a scalar");
   }
@@ -124,8 +135,9 @@ std::vector<ServerConfig> load_fleet_config(const std::string &path) {
         CubeConfig cube;
         cube.id =
             scalar_or_throw<std::string>(cube_node["id"], "servers[].cubes[].id");
-        cube.auto_connect = cube_node["auto_connect"].as<bool>(false);
-        cube.auto_subscribe = cube_node["auto_subscribe"].as<bool>(false);
+        cube.auto_connect = cube_node["auto_connect"].as<bool>(true);
+        cube.auto_subscribe = cube_node["auto_subscribe"].as<bool>(true);
+        cube.initial_led = random_led_color();
         if (auto led_node = cube_node["initial_led"]; led_node) {
           if (!led_node.IsSequence() || led_node.size() != 3) {
             throw std::runtime_error("initial_led must be an array of 3 ints");
