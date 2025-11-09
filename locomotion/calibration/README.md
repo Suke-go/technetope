@@ -55,6 +55,9 @@ locomotion/calibration/
  │   ├─ FloorPlaneEstimator.cpp      # いまはプレースホルダ、将来 RANSAC 実装
  │   └─ PlaymatLayout.cpp
  ├─ config/                          # toio プレイマットレイアウト JSON
+ ├─ assets/                          # 生成ファイル（git管理外）
+ │   ├─ boards/                      # ChArUcoボード関連
+ │   └─ markers/                     # 参考用マーカーシート
  └─ tools/                           # キャリブレーション CLI / スクリプト
 ```
 
@@ -65,10 +68,34 @@ locomotion/calibration/
    - メジャーや定規で横幅・縦幅を測り、ID↔mm 換算の誤差をメモしておきます（後で JSON 更新）。
    - 連番マット（TMD01SS）の場合は、各面（#01-#12）の座標範囲をPDFから確認してください。
 
-2. **ArUco / Charuco マーカーの作成**  
-   - `python locomotion/calibration/tools/generate_marker_sheet.py --output markers_a4_45mm.png --metadata markers_a4_45mm.json` を実行。  
-   - `markers_a4_45mm.png` を A4 用紙にスケール 100% で印刷し、45 mm 角になっているか定規で確認。  
-   - 必要に応じて `--marker-size-mm` などを調整して再印刷。
+2. **ChArUco ボードの作成と印刷**  
+   - **推奨方法**: 印刷ガイドPDFを生成
+     ```bash
+     # 仮想環境を使用（推奨）
+     python3 -m venv venv
+     source venv/bin/activate
+     pip install Pillow  # または reportlab（完全版）
+     
+     # PDFを生成
+     python3 locomotion/calibration/tools/generate_printing_guide.py \
+       --output charuco_board_printing_guide.pdf
+     ```
+     PDFを開いて印刷してください。
+   
+   - **手動方法**: ボード画像を直接生成
+     ```bash
+     python3 locomotion/calibration/tools/generate_charuco_board.py \
+       --output assets/boards/charuco_board_5x7_45mm.png
+     ```
+     `assets/boards/charuco_board_5x7_45mm.png` をA3以上の用紙にスケール100%で印刷。
+     
+   - **生成ファイルの場所**: 生成されたChArUcoボードとマーカーシートは `assets/` ディレクトリに保存されます
+     - ChArUcoボード: `assets/boards/charuco_board_5x7_45mm.png`
+     - 参考用マーカー: `assets/markers/markers_a4_45mm.png`
+   
+   - **印刷設定**: 「実際のサイズ」「100%」「余白なし印刷」を選択
+   - **実寸確認**: チェス盤マスが45mm、ArUcoマーカーが33mmか定規で確認
+   - 詳細は `docs/PRINTING_GUIDE.md` を参照
 
 3. **マーカー貼り付け**  
    - プレイマット上の所定位置（例: 中央付近の 2×2 マスに収まるよう）へマーカーを貼付し、toio が通行できるようテープで固定します。  
@@ -77,6 +104,7 @@ locomotion/calibration/
 4. **レイアウト JSON の更新**  
    - `locomotion/calibration/config/toio_playmat.json` を開き、実測値で `position_id_extent`, `id_per_mm`, `board_to_position_id` の対応点を更新します。  
    - Charuco ボードを中心に貼る場合は `charuco_5x7_45mm` を使い、他の配置にしたい場合は `charuco_mounts` に新しい `label` を追加します。
+   - **四点計測**: 精度向上のため、ChArUcoボードの4つの角（左上、右上、左下、右下）のtoio Position ID座標を計測して `correspondences` に追加することを推奨します。詳細は `docs/four_point_measurement.md` を参照してください。
 
 5. **実行時設定**  
    - キャリブレーション実装から `CalibrationConfig::playmat_layout_path` に JSON のパス（既定は `config/toio_playmat.json`）、`board_mount_label` に利用したマウントのラベル（既定は `center_mount_nominal`）を指定します。  

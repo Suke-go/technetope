@@ -45,12 +45,17 @@ CalibrationSession::CalibrationSession(CalibrationPipeline pipeline,
 }
 
 std::optional<CalibrationResult> CalibrationSession::Run() {
-  // Note: pipeline should already be initialized before Run() is called
-  // This check is kept for backward compatibility but initialize() should be called
-  // with config file directory from the tool that creates the session
-  if (!pipeline_.initialize()) {
-    spdlog::error("Failed to initialize CalibrationPipeline.");
-    return std::nullopt;
+  // Check if pipeline is already initialized to avoid double initialization
+  if (!pipeline_.is_initialized()) {
+    // Note: pipeline should be initialized before Run() is called
+    // This check is kept for backward compatibility but initialize() should be called
+    // with config file directory from the tool that creates the session
+    if (!pipeline_.initialize()) {
+      spdlog::error("Failed to initialize CalibrationPipeline.");
+      return std::nullopt;
+    }
+  } else {
+    spdlog::debug("CalibrationPipeline already initialized, skipping re-initialization");
   }
 
   std::optional<CalibrationResult> best;

@@ -12,7 +12,9 @@ namespace locomotion::calibration {
 
 namespace {
 
-constexpr double kEpsilon = 1e-6;
+// Use slightly larger epsilon for Apple Silicon compatibility
+// ARM64 and x86_64 (including Rosetta2) may have slightly different floating point results
+constexpr double kEpsilon = 1e-5;
 
 struct PlaneModel {
   cv::Vec4d plane;
@@ -99,6 +101,12 @@ std::optional<FloorPlaneEstimate> FloorPlaneEstimator::Estimate(
     spdlog::warn("FloorPlaneEstimator received empty depth image.");
     return std::nullopt;
   }
+  // Check depth image type - must be CV_16UC1 (16-bit unsigned, single channel)
+  if (depth_image.type() != CV_16UC1) {
+    spdlog::warn("FloorPlaneEstimator received depth image with invalid type: {} (expected CV_16UC1: {})",
+                 depth_image.type(), CV_16UC1);
+    return std::nullopt;
+  }
   if (intrinsics.fx == 0.0 || intrinsics.fy == 0.0) {
     spdlog::warn("Invalid intrinsics for floor estimation (fx/fy == 0).");
     return std::nullopt;
@@ -138,6 +146,12 @@ std::optional<FloorPlaneEstimate> FloorPlaneEstimator::Estimate(
     return std::nullopt;
   }
 
+  // Check points.size() > 0 before creating distribution to avoid underflow
+  if (points.size() == 0) {
+    spdlog::warn("points.size() is 0, cannot create distribution");
+    return std::nullopt;
+  }
+  
   std::uniform_int_distribution<size_t> dist(0, points.size() - 1);
 
   PlaneModel best_model;

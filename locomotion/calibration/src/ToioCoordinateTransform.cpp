@@ -15,7 +15,8 @@ cv::Point2f TransformImagePixelToToio(cv::Point2f image_pixel,
   cv::Mat result_homogeneous = homography_color_to_toio * point_homogeneous;
 
   double w = result_homogeneous.at<double>(2, 0);
-  if (std::abs(w) < 1e-6) {
+  // Use 1e-5 instead of 1e-6 for better Apple Silicon compatibility
+  if (std::abs(w) < 1e-5) {
     return cv::Point2f(0.0f, 0.0f);
   }
 
@@ -44,7 +45,8 @@ cv::Point2f TransformToioToImagePixel(cv::Point2f toio_position,
   cv::Mat result_homogeneous = homography_toio_to_color * point_homogeneous;
 
   double w = result_homogeneous.at<double>(2, 0);
-  if (std::abs(w) < 1e-6) {
+  // Use 1e-5 instead of 1e-6 for better Apple Silicon compatibility
+  if (std::abs(w) < 1e-5) {
     return cv::Point2f(0.0f, 0.0f);
   }
 

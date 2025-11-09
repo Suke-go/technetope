@@ -15,7 +15,9 @@ namespace locomotion::calibration {
 
 namespace {
 
-constexpr double kEpsilon = 1e-6;
+// Use slightly larger epsilon for Apple Silicon compatibility
+// ARM64 and x86_64 (including Rosetta2) may have slightly different floating point results
+constexpr double kEpsilon = 1e-5;
 constexpr double kPixelsToMmApprox = 2.0;  // 簡易的なピクセル→mm変換係数（概算）
 constexpr double kLn2 = 0.6931471805599453;  // ln(2)
 
@@ -214,10 +216,25 @@ HumanDetectionResult HumanDetector::Detect(const FrameBundle& frame,
       track_it_final->last_velocity = detection.velocity_mm_per_s;
       
       // 速度の分散を更新（ノイズ推定用）
+      // Ensure position_history and time_history are synchronized
+      if (track_it_final->position_history.size() != track_it_final->time_history.size()) {
+        spdlog::warn("Position and time history size mismatch detected (pos: {}, time: {}), synchronizing",
+                     track_it_final->position_history.size(), track_it_final->time_history.size());
+        // Synchronize by using the minimum size
+        size_t min_size = std::min(track_it_final->position_history.size(), 
+                                    track_it_final->time_history.size());
+        track_it_final->position_history.resize(min_size);
+        track_it_final->time_history.resize(min_size);
+      }
+      
       if (track_it_final->position_history.size() >= 5) {
         std::vector<double> velocities;
         for (size_t i = 1; i < track_it_final->position_history.size(); ++i) {
-          if (i >= track_it_final->time_history.size()) break;
+          // Now safe to access time_history[i] since sizes are synchronized
+          if (i >= track_it_final->time_history.size()) {
+            spdlog::warn("Time history index out of bounds, breaking loop");
+            break;
+          }
           double delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(
               track_it_final->time_history[i] - track_it_final->time_history[i - 1]).count() / 1000.0;
           if (delta_time > kEpsilon && delta_time < 1.0) {
@@ -303,9 +320,15 @@ std::vector<HumanDetection> HumanDetector::FineDetect(
   std::vector<HumanDetection> detections;
 
   for (const auto& roi : coarse_rois) {
-    // ROIの範囲チェック
+    // ROIの範囲チェック - 負の値や0以下の幅・高さをチェック
+    if (roi.width <= 0 || roi.height <= 0) {
+      spdlog::debug("FineDetect: Invalid ROI dimensions (width: {}, height: {})", roi.width, roi.height);
+      continue;
+    }
     if (roi.x < 0 || roi.y < 0 || roi.x + roi.width > frame.depth.cols ||
         roi.y + roi.height > frame.depth.rows) {
+      spdlog::debug("FineDetect: ROI out of bounds (x: {}, y: {}, width: {}, height: {}, image: {}x{})",
+                    roi.x, roi.y, roi.width, roi.height, frame.depth.cols, frame.depth.rows);
       continue;
     }
 
@@ -592,9 +615,16 @@ HumanMotionState HumanDetector::DetermineMotionState(int human_id,
   double alpha = kLn2 / config_.velocity_half_life_seconds;
   auto time_now = current_time;
   
-  for (size_t i = 0; i < it->position_history.size() - 1; ++i) {
-    if (i >= it->time_history.size()) break;
-    
+  // Ensure position_history and time_history are synchronized
+  if (it->position_history.size() != it->time_history.size()) {
+    spdlog::warn("Position and time history size mismatch in DetermineMotionState (pos: {}, time: {}), synchronizing",
+                 it->position_history.size(), it->time_history.size());
+    size_t min_size = std::min(it->position_history.size(), it->time_history.size());
+    // Note: This is a const method, so we can't modify. Use synchronized size for loop.
+  }
+  size_t synchronized_size = std::min(it->position_history.size(), it->time_history.size());
+  
+  for (size_t i = 0; i < synchronized_size - 1; ++i) {
     auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(
         time_now - it->time_history[i]).count() / 1000.0;
     
@@ -620,8 +650,9 @@ HumanMotionState HumanDetector::DetermineMotionState(int human_id,
   if (is_standing && it->position_history.size() >= 10) {
     // 過去10フレームのうち、8フレーム以上で静止しているか
     int standing_count = 0;
-    for (size_t i = std::max(0, static_cast<int>(it->position_history.size()) - 10); 
-         i < it->position_history.size() - 1; ++i) {
+    size_t history_size = it->position_history.size();
+    size_t start_idx = (history_size >= 10) ? history_size - 10 : 0;
+    for (size_t i = start_idx; i < history_size - 1; ++i) {
       double dist = cv::norm(it->position_history[i + 1] - it->position_history[i]);
       if (dist < config_.movement_threshold_mm) {
         standing_count++;
@@ -687,6 +718,15 @@ void HumanDetector::UpdateTrackingHistory(int id,
                          });
 
   if (it != tracked_humans_.end()) {
+    // Check for history synchronization issue before updating
+    if (it->position_history.size() != it->time_history.size()) {
+      spdlog::warn("Position and time history size mismatch before update (pos: {}, time: {}), synchronizing",
+                   it->position_history.size(), it->time_history.size());
+      size_t min_size = std::min(it->position_history.size(), it->time_history.size());
+      it->position_history.resize(min_size);
+      it->time_history.resize(min_size);
+    }
+    
     // 外れ値チェック
     if (config_.enable_outlier_rejection && IsOutlier(position, *it)) {
       // 外れ値の場合は前回の位置を使用（平滑化のため）
@@ -699,17 +739,36 @@ void HumanDetector::UpdateTrackingHistory(int id,
     it->last_position = smoothed_position;
     it->last_seen = timestamp;
     
-    // 履歴に追加（平滑化済み位置を使用）
+    // 履歴に追加（平滑化済み位置を使用）- 常に同期して追加
     it->position_history.push_back(smoothed_position);
     it->time_history.push_back(timestamp);
+    
+    // Ensure synchronization after adding (should always be equal, but double-check)
+    if (it->position_history.size() != it->time_history.size()) {
+      spdlog::error("History synchronization error after update (pos: {}, time: {}), fixing",
+                    it->position_history.size(), it->time_history.size());
+      size_t min_size = std::min(it->position_history.size(), it->time_history.size());
+      it->position_history.resize(min_size);
+      it->time_history.resize(min_size);
+    }
 
-    // 履歴のサイズを制限（最大60フレーム）
+    // 履歴のサイズを制限（最大60フレーム）- 両方を同時に削除して同期を保つ
     const int max_history = config_.movement_history_frames;
     if (static_cast<int>(it->position_history.size()) > max_history) {
+      size_t elements_to_remove = it->position_history.size() - max_history;
       it->position_history.erase(it->position_history.begin(),
-                                 it->position_history.end() - max_history);
+                                 it->position_history.begin() + elements_to_remove);
       it->time_history.erase(it->time_history.begin(),
-                             it->time_history.end() - max_history);
+                             it->time_history.begin() + elements_to_remove);
+    }
+    
+    // Final synchronization check
+    if (it->position_history.size() != it->time_history.size()) {
+      spdlog::error("History synchronization error after size limit (pos: {}, time: {}), fixing",
+                    it->position_history.size(), it->time_history.size());
+      size_t min_size = std::min(it->position_history.size(), it->time_history.size());
+      it->position_history.resize(min_size);
+      it->time_history.resize(min_size);
     }
   }
 }
@@ -752,10 +811,18 @@ cv::Point2f HumanDetector::ComputeWeightedVelocity(const TrackingState& track,
 
   const auto& positions = track.position_history;
   const auto& times = track.time_history;
+  
+  // Ensure synchronization - use minimum size to avoid index out of bounds
   size_t n = std::min(positions.size(), times.size());
   
   if (n < 2) {
     return cv::Point2f(0.0f, 0.0f);
+  }
+  
+  // Check for size mismatch and warn
+  if (positions.size() != times.size()) {
+    spdlog::debug("Position and time history size mismatch in ComputeWeightedVelocity (pos: {}, time: {}), using min size {}",
+                  positions.size(), times.size(), n);
   }
 
   // 指数減衰重みを使用した時間重み付き速度計算
@@ -767,7 +834,7 @@ cv::Point2f HumanDetector::ComputeWeightedVelocity(const TrackingState& track,
   
   // 現在時刻からの経過時間を計算
   auto current_time_point = current_time;
-  if (times.size() < n) {
+  if (n > 0 && times.size() >= n) {
     current_time_point = times.back();
   }
 
@@ -886,6 +953,21 @@ bool HumanDetector::IsNoise(const cv::Point2f& displacement, double delta_time_s
   
   // ノイズ閾値以下の動きは無視
   return distance < config_.noise_threshold_mm;
+}
+
+cv::Point2f HumanDetector::GetVelocity(int human_id) const {
+  auto it = std::find_if(tracked_humans_.begin(), tracked_humans_.end(),
+                         [human_id](const TrackingState& state) {
+                           return state.id == human_id;
+                         });
+  
+  if (it == tracked_humans_.end()) {
+    return cv::Point2f(0.0f, 0.0f);
+  }
+  
+  // ComputeWeightedVelocityを使用して速度を計算
+  auto current_time = std::chrono::system_clock::now();
+  return ComputeWeightedVelocity(*it, current_time);
 }
 
 }  // namespace locomotion::calibration

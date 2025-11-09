@@ -121,6 +121,7 @@ class CalibrationPipeline {
   [[nodiscard]] const std::string& camera_model() const noexcept { return camera_model_; }
   [[nodiscard]] const std::string& camera_serial() const noexcept { return camera_serial_; }
   [[nodiscard]] double depth_scale_m() const noexcept { return depth_scale_m_; }
+  [[nodiscard]] bool is_initialized() const noexcept { return is_initialized_; }
 
   // Coordinate transformation methods
   // Note: These require a valid calibration snapshot. Use the latest snapshot from ProcessFrame().

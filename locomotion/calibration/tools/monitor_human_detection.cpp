@@ -128,18 +128,50 @@ HumanDetectionConfig loadHumanDetectionConfig(const nlohmann::json& j) {
 
 // JSONからcv::Matを読み込む（行の配列形式）
 cv::Mat jsonToMat(const nlohmann::json& j) {
-  if (!j.is_array() || j.empty()) {
+  if (!j.is_array()) {
+    spdlog::warn("jsonToMat: Input is not an array");
     return cv::Mat();
   }
+  if (j.empty()) {
+    spdlog::warn("jsonToMat: Input array is empty");
+    return cv::Mat();
+  }
+  
+  // Check if first element is an array and get column count
+  if (!j[0].is_array()) {
+    spdlog::warn("jsonToMat: First element is not an array");
+    return cv::Mat();
+  }
+  
   int rows = static_cast<int>(j.size());
   int cols = static_cast<int>(j[0].size());
+  
+  if (rows <= 0 || cols <= 0) {
+    spdlog::warn("jsonToMat: Invalid dimensions (rows: {}, cols: {})", rows, cols);
+    return cv::Mat();
+  }
+  
   cv::Mat mat(rows, cols, CV_64F);
   for (int r = 0; r < rows; ++r) {
-    if (!j[r].is_array() || static_cast<int>(j[r].size()) != cols) {
+    if (!j[r].is_array()) {
+      spdlog::warn("jsonToMat: Row {} is not an array", r);
+      return cv::Mat();
+    }
+    if (static_cast<int>(j[r].size()) != cols) {
+      spdlog::warn("jsonToMat: Row {} has {} columns, expected {}", r, j[r].size(), cols);
       return cv::Mat();
     }
     for (int c = 0; c < cols; ++c) {
-      mat.at<double>(r, c) = j[r][c].get<double>();
+      if (!j[r][c].is_number()) {
+        spdlog::warn("jsonToMat: Element at ({}, {}) is not a number", r, c);
+        return cv::Mat();
+      }
+      try {
+        mat.at<double>(r, c) = j[r][c].get<double>();
+      } catch (const nlohmann::json::exception& e) {
+        spdlog::warn("jsonToMat: Failed to get double at ({}, {}): {}", r, c, e.what());
+        return cv::Mat();
+      }
     }
   }
   return mat;

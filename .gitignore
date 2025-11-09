@@ -50,3 +50,9 @@ acoustics/firmware/include/Secrets.h
 # IDE settings
 .idea/
 .vscode/
+imgui.ini
+
+# Generated calibration assets
+locomotion/calibration/assets/**/*.png
+locomotion/calibration/assets/**/*.json
+locomotion/calibration/assets/**/*.pdf

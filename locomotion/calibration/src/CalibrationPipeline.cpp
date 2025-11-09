@@ -138,6 +138,27 @@ bool CalibrationPipeline::initialize(const std::string& config_file_dir) {
     return true;
   }
 
+  // Log execution architecture for debugging (especially important on Apple Silicon)
+  #if defined(__APPLE__)
+    #if defined(__aarch64__) || defined(__arm64__)
+      spdlog::info("Running on Apple Silicon (ARM64) - native mode");
+    #elif defined(__x86_64__)
+      spdlog::info("Running on Apple Silicon (x86_64) - Rosetta2 mode");
+    #else
+      spdlog::info("Running on macOS (unknown architecture)");
+    #endif
+  #elif defined(__linux__)
+    #if defined(__aarch64__) || defined(__arm64__)
+      spdlog::info("Running on Linux ARM64");
+    #elif defined(__x86_64__)
+      spdlog::info("Running on Linux x86_64");
+    #else
+      spdlog::info("Running on Linux (unknown architecture)");
+    #endif
+  #else
+    spdlog::info("Running on unknown platform");
+  #endif
+
   spdlog::set_level(parseLogLevel(config_.log_level));
   dictionary_ = makeDictionary(config_);
   board_ = cv::makePtr<cv::aruco::CharucoBoard>(
@@ -184,7 +205,40 @@ bool CalibrationPipeline::initialize(const std::string& config_file_dir) {
     profile_ = pipeline_.start(buildRealSenseConfig(config_));
     spdlog::info("RealSense pipeline started for calibration");
   } catch (const rs2::error& err) {
-    spdlog::error("Failed to start RealSense pipeline: {}", err.what());
+    std::string err_msg = err.what();
+    spdlog::error("Failed to start RealSense pipeline: {}", err_msg);
+    
+    // Apple Silicon特有のエラーメッセージを検出して対処法を提示
+    #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__) || defined(__x86_64__))
+      bool is_apple_silicon_error = false;
+      if (err_msg.find("libusb_init") != std::string::npos || 
+          err_msg.find("LIBUSB_ERROR") != std::string::npos ||
+          err_msg.find("USB") != std::string::npos) {
+        spdlog::error("Apple Silicon: This error often requires sudo execution.");
+        spdlog::error("Try: sudo killall VDCAssistant AppleCameraAssistant 2>/dev/null || true");
+        spdlog::error("Then run with: sudo ./your_program");
+        is_apple_silicon_error = true;
+      }
+      if (err_msg.find("AppleUSBHost") != std::string::npos || 
+          err_msg.find("provider is already opened") != std::string::npos ||
+          err_msg.find("already opened") != std::string::npos) {
+        spdlog::error("Apple Silicon: Camera may be in use by another process.");
+        spdlog::error("Try: sudo killall VDCAssistant AppleCameraAssistant 2>/dev/null || true");
+        spdlog::error("Unplug and replug the camera, then run immediately with sudo.");
+        is_apple_silicon_error = true;
+      }
+      if (err_msg.find("claim") != std::string::npos || 
+          err_msg.find("interface") != std::string::npos) {
+        spdlog::error("Apple Silicon: USB interface claim failed. Try:");
+        spdlog::error("1. sudo killall VDCAssistant AppleCameraAssistant");
+        spdlog::error("2. Unplug and replug the camera");
+        spdlog::error("3. Run immediately with sudo");
+        is_apple_silicon_error = true;
+      }
+      if (is_apple_silicon_error) {
+        spdlog::error("See docs/apple_silicon_realsense.md for more details.");
+      }
+    #endif
     return false;
   }
 
@@ -285,10 +339,23 @@ bool CalibrationPipeline::CaptureFrame(FrameBundle& bundle) {
 
 std::optional<CalibrationSnapshot> CalibrationPipeline::ProcessFrame(
     const FrameBundle& bundle) const {
-  auto detection =
-      (charuco_detector_ && !bundle.color.empty())
-          ? charuco_detector_->Detect(bundle.color)
-          : std::nullopt;
+  // Check if pipeline is properly initialized
+  if (!is_initialized_) {
+    spdlog::error("ProcessFrame called on uninitialized CalibrationPipeline");
+    return std::nullopt;
+  }
+  
+  if (!charuco_detector_) {
+    spdlog::error("ProcessFrame called but charuco_detector_ is not initialized");
+    return std::nullopt;
+  }
+  
+  if (bundle.color.empty()) {
+    spdlog::warn("ProcessFrame received empty color image");
+    return std::nullopt;
+  }
+  
+  auto detection = charuco_detector_->Detect(bundle.color);
   if (!detection) {
     spdlog::info("ChArUco board not detected in current frame");
     return std::nullopt;
@@ -297,6 +364,12 @@ std::optional<CalibrationSnapshot> CalibrationPipeline::ProcessFrame(
   CalibrationSnapshot snapshot;
   snapshot.intrinsics = camera_intrinsics_;
   snapshot.detected_charuco_corners = detection->detected_charuco_corners;
+  
+  // Check if intrinsics are loaded before computing homographies
+  if (!intrinsics_loaded_) {
+    spdlog::warn("Intrinsics not loaded, homography computation may be inaccurate");
+  }
+  
   if (!computeHomographies(*detection, snapshot.homography_color_to_floor,
                            snapshot.homography_color_to_toio, snapshot.toio_transform,
                            snapshot.reprojection_error_floor_mm,
@@ -307,7 +380,15 @@ std::optional<CalibrationSnapshot> CalibrationPipeline::ProcessFrame(
   }
 
   if (config_.enable_floor_plane_fit) {
-    if (!estimateFloorPlane(bundle, snapshot.floor_plane, snapshot.floor_plane_std_mm,
+    // Check if floor estimator is initialized
+    if (!floor_estimator_) {
+      spdlog::warn("Floor plane fitting enabled but floor_estimator_ is not initialized");
+      snapshot.floor_plane = {0.0F, 0.0F, 1.0F, 0.0F};
+      snapshot.floor_plane_std_mm = 0.0;
+      snapshot.inlier_ratio = 0.0;
+      snapshot.floor_inlier_count = 0;
+      snapshot.camera_height_mm = 0.0;
+    } else if (!estimateFloorPlane(bundle, snapshot.floor_plane, snapshot.floor_plane_std_mm,
                             snapshot.inlier_ratio, snapshot.floor_inlier_count,
                             snapshot.camera_height_mm)) {
       spdlog::warn("Floor plane estimation failed");
@@ -342,10 +423,20 @@ bool CalibrationPipeline::captureAlignedFrame(FrameBundle& bundle) {
                            CV_8UC3, const_cast<void*>(color.get_data()),
                            cv::Mat::AUTO_STEP)
                        .clone();
+    // Only apply undistortion if intrinsics are loaded and matrices are valid
     if (intrinsics_loaded_ && !camera_matrix_.empty() && !dist_coeffs_.empty()) {
-      cv::Mat undistorted;
-      cv::undistort(bundle.color, undistorted, camera_matrix_, dist_coeffs_);
-      bundle.color = std::move(undistorted);
+      // Verify camera matrix is 3x3 and dist_coeffs is valid
+      if (camera_matrix_.rows == 3 && camera_matrix_.cols == 3 && 
+          dist_coeffs_.rows == 1 && dist_coeffs_.cols >= 4) {
+        cv::Mat undistorted;
+        cv::undistort(bundle.color, undistorted, camera_matrix_, dist_coeffs_);
+        bundle.color = std::move(undistorted);
+      } else {
+        spdlog::warn("Invalid camera matrix or distortion coefficients, skipping undistortion");
+      }
+    } else if (config_.enable_floor_plane_fit || !camera_matrix_.empty()) {
+      // Only warn if we expected intrinsics but they're not loaded
+      spdlog::debug("Intrinsics not loaded, skipping undistortion");
     }
     bundle.depth = cv::Mat(cv::Size(depth.get_width(), depth.get_height()),
                            CV_16UC1, const_cast<void*>(depth.get_data()),
@@ -353,7 +444,20 @@ bool CalibrationPipeline::captureAlignedFrame(FrameBundle& bundle) {
                        .clone();
     return true;
   } catch (const rs2::error& err) {
-    spdlog::error("RealSense capture error: {}", err.what());
+    std::string err_msg = err.what();
+    spdlog::error("RealSense capture error: {}", err_msg);
+    
+    // Apple Silicon特有のエラーメッセージを検出
+    #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__) || defined(__x86_64__))
+      if (err_msg.find("libusb_init") != std::string::npos || 
+          err_msg.find("LIBUSB_ERROR") != std::string::npos ||
+          err_msg.find("USB") != std::string::npos ||
+          err_msg.find("claim") != std::string::npos ||
+          err_msg.find("AppleUSBHost") != std::string::npos) {
+        spdlog::warn("Apple Silicon: RealSense access error detected.");
+        spdlog::warn("Ensure you are running with sudo and camera processes are stopped.");
+      }
+    #endif
     return false;
   }
 }
@@ -381,8 +485,20 @@ bool CalibrationPipeline::computeHomographies(
     return false;
   }
 
+  // Check if homography is invertible (determinant check)
+  // Use 1e-5 instead of 1e-6 for better Apple Silicon compatibility
+  double det = cv::determinant(homography_color_to_floor);
+  if (std::abs(det) < 1e-5) {
+    spdlog::warn("Homography matrix is singular (determinant: {:.6e}), cannot compute inverse", det);
+    return false;
+  }
+
   // Compute reprojection error in pixel coordinates (image space)
   cv::Mat homography_inv = homography_color_to_floor.inv();
+  if (homography_inv.empty()) {
+    spdlog::warn("Failed to compute inverse homography");
+    return false;
+  }
   std::vector<cv::Point2f> projected_image_points;
   cv::perspectiveTransform(floor_points, projected_image_points, homography_inv);
   reprojection_error_px = computeRmsError(detection.image_points, projected_image_points);
@@ -400,6 +516,21 @@ bool CalibrationPipeline::computeHomographies(
       mount ? mount->affine_mm_to_position : cv::Matx33d::eye();
   cv::Mat board_to_toio = matFromMatx(board_to_toio_matx);
   homography_color_to_toio = board_to_toio * homography_color_to_floor;
+  
+  // Verify homography_color_to_toio is not empty after multiplication
+  if (homography_color_to_toio.empty()) {
+    spdlog::warn("homography_color_to_toio is empty after multiplication");
+    return false;
+  }
+  
+  // Check if homography_color_to_toio is invertible (determinant check)
+  // This check is important before using the homography for inverse transforms
+  double det_toio = cv::determinant(homography_color_to_toio);
+  if (std::abs(det_toio) < 1e-5) {
+    spdlog::warn("homography_color_to_toio matrix is singular (determinant: {:.6e}), cannot compute inverse", det_toio);
+    return false;
+  }
+  
   toio_transform.board_to_toio = board_to_toio_matx;
   toio_transform.color_to_toio = homography_color_to_toio.clone();
   toio_transform.mount_label =
@@ -432,6 +563,7 @@ bool CalibrationPipeline::computeHomographies(
     }
   }
 
+  // homography_color_to_toio is already verified above, proceed with perspective transform
   std::vector<cv::Point2f> projected_toio;
   cv::perspectiveTransform(detection.image_points, projected_toio,
                            homography_color_to_toio);
@@ -543,8 +675,20 @@ cv::Point2f CalibrationPipeline::TransformToioToPixel(
     return cv::Point2f(0.0f, 0.0f);
   }
   
+  // Check if homography is invertible (determinant check)
+  // Use 1e-5 instead of 1e-6 for better Apple Silicon compatibility
+  double det = cv::determinant(snapshot.homography_color_to_toio);
+  if (std::abs(det) < 1e-5) {
+    spdlog::warn("Homography matrix is singular (determinant: {:.6e}), cannot compute inverse", det);
+    return cv::Point2f(0.0f, 0.0f);
+  }
+  
   // Compute inverse homography
   cv::Mat homography_toio_to_color = snapshot.homography_color_to_toio.inv();
+  if (homography_toio_to_color.empty()) {
+    spdlog::warn("Failed to compute inverse homography for TransformToioToPixel");
+    return cv::Point2f(0.0f, 0.0f);
+  }
   return TransformToioToImagePixel(toio_pos, homography_toio_to_color);
 }
 
