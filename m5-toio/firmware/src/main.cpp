@@ -43,7 +43,8 @@ void DrawHeader(const char *message)
   display.setTextDatum(TL_DATUM);
 }
 
-void ShowPositionData(const CubePose &pose)
+void ShowPositionData(const CubePose &pose, bool hasPose, bool hasBattery,
+                      uint8_t batteryLevel)
 {
   auto &display = M5.Display;
   display.fillRect(0, kStatusAreaY, display.width(),
@@ -52,8 +53,9 @@ void ShowPositionData(const CubePose &pose)
 
   const uint32_t now_ms = millis();
   display.printf("t:%08lu ms\n", static_cast<unsigned long>(now_ms));
-  M5.Log.printf("[%08lu ms][display] ", static_cast<unsigned long>(now_ms));
-  if (g_hasIdData)
+  M5.Log.printf("[%08lu ms][display] ",
+                static_cast<unsigned long>(now_ms));
+  if (hasPose)
   {
     display.printf("Cube  X:%4u  Y:%4u \n Angle:%3u, on_mat:%s\n",
                    pose.x, pose.y, pose.angle,
@@ -62,10 +64,10 @@ void ShowPositionData(const CubePose &pose)
                   pose.x, pose.y, pose.angle,
                   pose.on_mat ? "yes" : "no");
   }
-  if (g_hasBatteryLevel)
+  if (hasBattery)
   {
-    display.printf("Battery: %3u%%", g_batteryLevel);
-    M5.Log.printf("battery=%u%%", g_batteryLevel);
+    display.printf("Battery: %3u%%", batteryLevel);
+    M5.Log.printf("battery=%u%%", batteryLevel);
   }
   M5.Log.println();
 }
@@ -91,34 +93,36 @@ ToioCore *PickTargetCore(const std::vector<ToioCore *> &cores)
   return nullptr;
 }
 
-void HandleIdData(const ToioCoreIDData &data)
+void HandleIdData(const ToioCoreIDData &idData, CubePose &storedPose,
+                  bool &hasPoseFlag, bool &pendingDisplayFlag)
 {
-  if (data.type == ToioCoreIDTypePosition)
+  if (idData.type == ToioCoreIDTypePosition)
   {
-    g_latestPose.x = data.position.cubePosX;
-    g_latestPose.y = data.position.cubePosY;
-    g_latestPose.angle = data.position.cubeAngleDegree;
-    g_latestPose.on_mat = true;
+    storedPose.x = idData.position.cubePosX;
+    storedPose.y = idData.position.cubePosY;
+    storedPose.angle = idData.position.cubeAngleDegree;
+    storedPose.on_mat = true;
   }
   else
   {
-    g_latestPose.x = 0;
-    g_latestPose.y = 0;
-    g_latestPose.angle = 0;
-    g_latestPose.on_mat = false;
+    storedPose.x = 0;
+    storedPose.y = 0;
+    storedPose.angle = 0;
+    storedPose.on_mat = false;
   }
-  g_hasIdData = true;
-  g_pendingDisplay = true;
+  hasPoseFlag = true;
+  pendingDisplayFlag = true;
 }
 
-void HandleBatteryLevel(uint8_t level)
+void HandleBatteryLevel(uint8_t measuredLevel, uint8_t &storedLevel,
+                        bool &hasBatteryFlag, bool &pendingDisplayFlag)
 {
-  g_batteryLevel = level;
-  g_hasBatteryLevel = true;
-  g_pendingDisplay = true;
+  storedLevel = measuredLevel;
+  hasBatteryFlag = true;
+  pendingDisplayFlag = true;
 }
 
-void setup()
+void InitializeM5Hardware()
 {
   auto cfg = M5.config();
   cfg.clear_display = true;
@@ -128,27 +132,90 @@ void setup()
 
   M5.Display.setRotation(3);
   DrawHeader("Scanning...");
+}
 
+std::vector<ToioCore *> ScanToioCores(uint32_t durationSec)
+{
   M5.Log.println("- Scan toio core cubes");
-  std::vector<ToioCore *> toiocore_list = toio.scan(kScanDurationSec);
-  if (toiocore_list.empty())
+  auto cores = toio.scan(durationSec);
+  if (cores.empty())
   {
     M5.Log.println("- No toio core cube found.");
+    return cores;
+  }
+
+  M5.Log.printf("- %d toio core cube(s) found.\n",
+                static_cast<int>(cores.size()));
+  for (size_t i = 0; i < cores.size(); ++i)
+  {
+    ToioCore *core = cores.at(i);
+    M5.Log.printf("  %d: Addr=%s  Name=%s\n", static_cast<int>(i + 1),
+                  core->getAddress().c_str(), core->getName().c_str());
+  }
+  return cores;
+}
+
+bool EstablishConnection(ToioCore *core)
+{
+  if (!core)
+  {
+    return false;
+  }
+  M5.Log.printf("- Connecting to %s (%s)\n", core->getName().c_str(),
+                core->getAddress().c_str());
+  if (!core->connect())
+  {
+    M5.Log.println("- BLE connection failed.");
+    return false;
+  }
+  M5.Log.println("- BLE connection succeeded.");
+  return true;
+}
+
+void ConfigureActiveCore(ToioCore *core)
+{
+  if (!core)
+  {
+    return;
+  }
+
+  core->setIDnotificationSettings(/*minimum_interval=*/5,
+                                  /*condition=*/0x01);
+  core->setIDmissedNotificationSettings(/*sensitivity=*/10);
+  core->onIDReaderData([](ToioCoreIDData id_data)
+                       { HandleIdData(id_data, g_latestPose, g_hasIdData,
+                                      g_pendingDisplay); });
+  core->onBattery([](uint8_t level)
+                  { HandleBatteryLevel(level, g_batteryLevel,
+                                       g_hasBatteryLevel,
+                                       g_pendingDisplay); });
+
+  g_activeCore = core;
+  DrawHeader(core->getName().c_str());
+  HandleBatteryLevel(core->getBatteryLevel(), g_batteryLevel,
+                     g_hasBatteryLevel, g_pendingDisplay);
+  HandleIdData(core->getIDReaderData(), g_latestPose, g_hasIdData,
+               g_pendingDisplay);
+
+  ShowPositionData(g_latestPose, g_hasIdData, g_hasBatteryLevel,
+                   g_batteryLevel);
+  g_pendingDisplay = false;
+  g_lastDisplay = millis();
+}
+
+void setup()
+{
+  InitializeM5Hardware();
+
+  std::vector<ToioCore *> toiocore_list = ScanToioCores(kScanDurationSec);
+  if (toiocore_list.empty())
+  {
     DrawHeader("No cube found.");
     return;
   }
 
-  M5.Log.printf("- %d toio core cube(s) found.\n",
-                static_cast<int>(toiocore_list.size()));
-  for (size_t i = 0; i < toiocore_list.size(); ++i)
-  {
-    ToioCore *core = toiocore_list.at(i);
-    M5.Log.printf("  %d: Addr=%s  Name=%s\n", static_cast<int>(i + 1),
-                  core->getAddress().c_str(), core->getName().c_str());
-  }
-
-  ToioCore *targetCore = PickTargetCore(toiocore_list);
-  if (!targetCore)
+  g_activeCore = PickTargetCore(toiocore_list);
+  if (!g_activeCore)
   {
     M5.Log.printf("- Target fragment \"%s\" not matched.\n",
                   kTargetCubeNameFragment);
@@ -156,31 +223,21 @@ void setup()
     return;
   }
 
-  M5.Log.printf("- Connecting to %s (%s)\n", targetCore->getName().c_str(),
-                targetCore->getAddress().c_str());
-  if (!targetCore->connect())
+  if (!EstablishConnection(g_activeCore))
   {
-    M5.Log.println("- BLE connection failed.");
     DrawHeader("Connection failed.");
     return;
   }
 
-  targetCore->setIDnotificationSettings(/*minimum_interval=*/5,
-                                        /*condition=*/0x01);
-  targetCore->setIDmissedNotificationSettings(/*sensitivity=*/10);
-  targetCore->onIDReaderData([](ToioCoreIDData id_data)
-                             { HandleIdData(id_data); });
-  targetCore->onBattery([](uint8_t level)
-                        { HandleBatteryLevel(level); });
+  ConfigureActiveCore(g_activeCore);
 
-  g_activeCore = targetCore;
-  DrawHeader(targetCore->getName().c_str());
-  HandleBatteryLevel(targetCore->getBatteryLevel());
-  HandleIdData(targetCore->getIDReaderData());
-  ShowPositionData(g_latestPose);
-  g_pendingDisplay = false;
-  g_lastDisplay = millis();
-  M5.Log.println("- BLE connection succeeded.");
+  // テスト用のLED点灯と簡易モータ動作
+  g_activeCore->turnOnLed(0x00, 0xff, 0x80);
+  g_activeCore->controlMotor(/*ldir=*/true, /*lspeed=*/30,
+                             /*rdir=*/true, /*rspeed=*/30);
+  delay(1000);
+  g_activeCore->controlMotor(/*ldir=*/true, /*lspeed=*/0,
+                             /*rdir=*/true, /*rspeed=*/0);
 }
 
 void loop()
@@ -199,7 +256,8 @@ void loop()
     const uint32_t now = millis();
     if (g_pendingDisplay || (now - g_lastDisplay) >= kRefreshIntervalMs)
     {
-      ShowPositionData(g_latestPose);
+      ShowPositionData(g_latestPose, g_hasIdData, g_hasBatteryLevel,
+                       g_batteryLevel);
       g_pendingDisplay = false;
       g_lastDisplay = now;
     }
