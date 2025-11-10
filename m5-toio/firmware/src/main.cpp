@@ -1,38 +1,17 @@
 #include <M5Unified.h>
-#include <Toio.h>
-#include <cstring>
-#include <string>
-#include <vector>
 
-namespace
-{
-  constexpr const char kTargetCubeNameFragment[] =
-      "38t"; // 接続したいコアキューブ名の一部（空文字列なら先頭に接続）
-  constexpr uint32_t kScanDurationSec = 3;
-  constexpr uint32_t kRefreshIntervalMs = 1000;
-  constexpr uint32_t kStatusAreaY = 40;
+#include "toio_controller.h"
 
-  struct CubePose
-  {
-    uint16_t x = 0;
-    uint16_t y = 0;
-    uint16_t angle = 0;
-    bool on_mat = false;
-  };
+namespace {
+constexpr uint32_t kScanDurationSec = 3;
+constexpr uint32_t kRefreshIntervalMs = 1000;
+constexpr uint32_t kStatusAreaY = 40;
 
-  Toio toio;
-  ToioCore *g_activeCore = nullptr;
-  CubePose g_latestPose{};
-  bool g_hasIdData = false;
-  bool g_pendingDisplay = false;
-  uint32_t g_lastDisplay = 0;
-  uint8_t g_batteryLevel = 0;
-  bool g_hasBatteryLevel = false;
-}
+ToioController g_toio;
+uint32_t g_lastDisplay = 0;
 
-void DrawHeader(const char *message)
-{
-  auto &display = M5.Display;
+void DrawHeader(const char* message) {
+  auto& display = M5.Display;
   display.fillScreen(BLACK);
   display.setTextDatum(MC_DATUM);
   display.setTextColor(WHITE, BLACK);
@@ -43,87 +22,35 @@ void DrawHeader(const char *message)
   display.setTextDatum(TL_DATUM);
 }
 
-void ShowPositionData(const CubePose &pose, bool hasPose, bool hasBattery,
-                      uint8_t batteryLevel)
-{
-  auto &display = M5.Display;
+void ShowPositionData(const CubePose& pose, bool hasPose, bool hasBattery,
+                      uint8_t batteryLevel) {
+  auto& display = M5.Display;
   display.fillRect(0, kStatusAreaY, display.width(),
                    display.height() - kStatusAreaY, BLACK);
   display.setCursor(6, kStatusAreaY + 4);
 
   const uint32_t now_ms = millis();
   display.printf("t:%08lu ms\n", static_cast<unsigned long>(now_ms));
-  M5.Log.printf("[%08lu ms][display] ",
-                static_cast<unsigned long>(now_ms));
-  if (hasPose)
-  {
-    display.printf("Cube  X:%4u  Y:%4u \n Angle:%3u, on_mat:%s\n",
-                   pose.x, pose.y, pose.angle,
-                   pose.on_mat ? "yes" : "no");
-    M5.Log.printf("x=%u y=%u angle=%u on_mat=%s ",
-                  pose.x, pose.y, pose.angle,
+  M5.Log.printf("[%08lu ms][display] ", static_cast<unsigned long>(now_ms));
+
+  if (hasPose) {
+    display.printf("Cube  X:%4u  Y:%4u \n Angle:%3u, on_mat:%s\n", pose.x,
+                   pose.y, pose.angle, pose.on_mat ? "yes" : "no");
+    M5.Log.printf("x=%u y=%u angle=%u on_mat=%s ", pose.x, pose.y, pose.angle,
                   pose.on_mat ? "yes" : "no");
+  } else {
+    display.println("No position (off mat)");
+    M5.Log.print("no position ");
   }
-  if (hasBattery)
-  {
+
+  if (hasBattery) {
     display.printf("Battery: %3u%%", batteryLevel);
     M5.Log.printf("battery=%u%%", batteryLevel);
   }
   M5.Log.println();
 }
 
-ToioCore *PickTargetCore(const std::vector<ToioCore *> &cores)
-{
-  if (cores.empty())
-  {
-    return nullptr;
-  }
-  if (std::strlen(kTargetCubeNameFragment) == 0)
-  {
-    return cores.front();
-  }
-  for (auto *core : cores)
-  {
-    const std::string &name = core->getName();
-    if (name.find(kTargetCubeNameFragment) != std::string::npos)
-    {
-      return core;
-    }
-  }
-  return nullptr;
-}
-
-void HandleIdData(const ToioCoreIDData &idData, CubePose &storedPose,
-                  bool &hasPoseFlag, bool &pendingDisplayFlag)
-{
-  if (idData.type == ToioCoreIDTypePosition)
-  {
-    storedPose.x = idData.position.cubePosX;
-    storedPose.y = idData.position.cubePosY;
-    storedPose.angle = idData.position.cubeAngleDegree;
-    storedPose.on_mat = true;
-  }
-  else
-  {
-    storedPose.x = 0;
-    storedPose.y = 0;
-    storedPose.angle = 0;
-    storedPose.on_mat = false;
-  }
-  hasPoseFlag = true;
-  pendingDisplayFlag = true;
-}
-
-void HandleBatteryLevel(uint8_t measuredLevel, uint8_t &storedLevel,
-                        bool &hasBatteryFlag, bool &pendingDisplayFlag)
-{
-  storedLevel = measuredLevel;
-  hasBatteryFlag = true;
-  pendingDisplayFlag = true;
-}
-
-void InitializeM5Hardware()
-{
+void InitializeM5Hardware() {
   auto cfg = M5.config();
   cfg.clear_display = true;
   cfg.output_power = true;
@@ -134,133 +61,99 @@ void InitializeM5Hardware()
   DrawHeader("Scanning...");
 }
 
-std::vector<ToioCore *> ScanToioCores(uint32_t durationSec)
-{
-  M5.Log.println("- Scan toio core cubes");
-  auto cores = toio.scan(durationSec);
-  if (cores.empty())
-  {
-    M5.Log.println("- No toio core cube found.");
-    return cores;
+void ShowInitResult(ToioController::InitStatus status) {
+  const char* message = nullptr;
+  switch (status) {
+    case ToioController::InitStatus::kReady:
+      message = "Connected";
+      break;
+    case ToioController::InitStatus::kNoCubeFound:
+      message = "No cube found.";
+      break;
+    case ToioController::InitStatus::kTargetNotFound:
+      message = "Target cube not found.";
+      break;
+    case ToioController::InitStatus::kConnectionFailed:
+      message = "Connection failed.";
+      break;
+    case ToioController::InitStatus::kInvalidArgument:
+    default:
+      message = "Invalid request.";
+      break;
   }
-
-  M5.Log.printf("- %d toio core cube(s) found.\n",
-                static_cast<int>(cores.size()));
-  for (size_t i = 0; i < cores.size(); ++i)
-  {
-    ToioCore *core = cores.at(i);
-    M5.Log.printf("  %d: Addr=%s  Name=%s\n", static_cast<int>(i + 1),
-                  core->getAddress().c_str(), core->getName().c_str());
-  }
-  return cores;
+  DrawHeader(message);
+  M5.Log.println(message);
 }
 
-bool EstablishConnection(ToioCore *core)
-{
-  if (!core)
-  {
-    return false;
+void PerformStartupTest() {
+  constexpr uint8_t kLedR = 0x00;
+  constexpr uint8_t kLedG = 0xff;
+  constexpr uint8_t kLedB = 0x80;
+  constexpr uint8_t kTestSpeed = 30;
+
+  if (g_toio.setLedColor(kLedR, kLedG, kLedB)) {
+  M5.Log.println("LED test applied.");
   }
-  M5.Log.printf("- Connecting to %s (%s)\n", core->getName().c_str(),
-                core->getAddress().c_str());
-  if (!core->connect())
-  {
-    M5.Log.println("- BLE connection failed.");
-    return false;
+  if (g_toio.driveMotor(true, kTestSpeed, true, kTestSpeed)) {
+    delay(1000);
+    g_toio.driveMotor(true, 0, true, 0);
   }
-  M5.Log.println("- BLE connection succeeded.");
-  return true;
 }
+}  // namespace
 
-void ConfigureActiveCore(ToioCore *core)
-{
-  if (!core)
-  {
-    return;
-  }
-
-  core->setIDnotificationSettings(/*minimum_interval=*/5,
-                                  /*condition=*/0x01);
-  core->setIDmissedNotificationSettings(/*sensitivity=*/10);
-  core->onIDReaderData([](ToioCoreIDData id_data)
-                       { HandleIdData(id_data, g_latestPose, g_hasIdData,
-                                      g_pendingDisplay); });
-  core->onBattery([](uint8_t level)
-                  { HandleBatteryLevel(level, g_batteryLevel,
-                                       g_hasBatteryLevel,
-                                       g_pendingDisplay); });
-
-  g_activeCore = core;
-  DrawHeader(core->getName().c_str());
-  HandleBatteryLevel(core->getBatteryLevel(), g_batteryLevel,
-                     g_hasBatteryLevel, g_pendingDisplay);
-  HandleIdData(core->getIDReaderData(), g_latestPose, g_hasIdData,
-               g_pendingDisplay);
-
-  ShowPositionData(g_latestPose, g_hasIdData, g_hasBatteryLevel,
-                   g_batteryLevel);
-  g_pendingDisplay = false;
-  g_lastDisplay = millis();
-}
-
-void setup()
-{
+void setup() {
   InitializeM5Hardware();
+  
+  std::string target_fragment = "38t";
 
-  std::vector<ToioCore *> toiocore_list = ScanToioCores(kScanDurationSec);
-  if (toiocore_list.empty())
-  {
-    DrawHeader("No cube found.");
+  ToioCore* target = nullptr;
+  auto scan_status =
+      g_toio.scanTargets(target_fragment, kScanDurationSec, &target);
+  if (scan_status != ToioController::InitStatus::kReady) {
+    ShowInitResult(scan_status);
     return;
   }
 
-  g_activeCore = PickTargetCore(toiocore_list);
-  if (!g_activeCore)
-  {
-    M5.Log.printf("- Target fragment \"%s\" not matched.\n",
-                  kTargetCubeNameFragment);
-    DrawHeader("Target cube not found.");
+  auto connect_status = g_toio.connectAndConfigure(target);
+  if (connect_status != ToioController::InitStatus::kReady) {
+    ShowInitResult(connect_status);
     return;
   }
 
-  if (!EstablishConnection(g_activeCore))
-  {
-    DrawHeader("Connection failed.");
-    return;
-  }
+  ShowInitResult(ToioController::InitStatus::kReady);
+  ShowPositionData(g_toio.pose(), g_toio.hasPose(), g_toio.hasBatteryLevel(),
+                   g_toio.batteryLevel());
+  g_toio.clearPoseDirty();
+  g_toio.clearBatteryDirty();
+  g_lastDisplay = millis();
 
-  ConfigureActiveCore(g_activeCore);
-
-  // テスト用のLED点灯と簡易モータ動作
-  g_activeCore->turnOnLed(0x00, 0xff, 0x80);
-  g_activeCore->controlMotor(/*ldir=*/true, /*lspeed=*/30,
-                             /*rdir=*/true, /*rspeed=*/30);
-  delay(1000);
-  g_activeCore->controlMotor(/*ldir=*/true, /*lspeed=*/0,
-                             /*rdir=*/true, /*rspeed=*/0);
+  PerformStartupTest();
 }
 
-void loop()
-{
+void loop() {
   M5.update();
-  toio.loop();
+  g_toio.loop();
 
-  if (!g_activeCore)
-  { // No active core
+  if (!g_toio.hasActiveCore()) {
     delay(100);
     return;
   }
 
-  if (g_hasIdData)
-  { // New ID data available
-    const uint32_t now = millis();
-    if (g_pendingDisplay || (now - g_lastDisplay) >= kRefreshIntervalMs)
-    {
-      ShowPositionData(g_latestPose, g_hasIdData, g_hasBatteryLevel,
-                       g_batteryLevel);
-      g_pendingDisplay = false;
-      g_lastDisplay = now;
-    }
+  const bool pose_dirty = g_toio.poseDirty();
+  if (pose_dirty) {
+    g_toio.clearPoseDirty();
+  }
+  const bool battery_dirty = g_toio.batteryDirty();
+  if (battery_dirty) {
+    g_toio.clearBatteryDirty();
+  }
+  const bool needs_update = pose_dirty || battery_dirty ||
+                            (millis() - g_lastDisplay >= kRefreshIntervalMs);
+
+  if (needs_update) {
+    ShowPositionData(g_toio.pose(), g_toio.hasPose(),
+                     g_toio.hasBatteryLevel(), g_toio.batteryLevel());
+    g_lastDisplay = millis();
   }
 
   delay(10);
