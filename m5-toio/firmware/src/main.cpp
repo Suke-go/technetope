@@ -106,7 +106,8 @@ void InitGoalFollowing() {
   float g_goalY = 200.0f;
   
   g_toio.setGoalTuning(/*vmax=*/90.0f, /*wmax=*/80.0f, /*k_r=*/1.0f,
-                       /*k_a=*/0.8f);
+                       /*k_a=*/0.8f, /*reverse_threshold_deg=*/90.0f,
+                       /*reverse_hysteresis_deg=*/10.0f);
   g_toio.setGoal(g_goalX, g_goalY, /*stop_distance=*/20.0f);
 }
 }  // namespace

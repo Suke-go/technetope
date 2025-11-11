@@ -26,7 +26,7 @@ ToioController は M5StickC (UI/表示層) と Toio Core Cube の BLE 制御ロ�
 | `bool driveMotor(bool ldir, uint8_t lspeed, bool rdir, uint8_t rspeed)` | Toio の左右モーターを直接制御。GoalTracker からも内部的に利用。 |
 | `void setGoal(float x, float y, float stop_distance = 20.0f)` | 目標地点を登録し、GoalTracker が追従を開始する。 |
 | `void clearGoal()` | 目標追従を停止してモーターを停止する。 |
-| `void setGoalTuning(float vmax, float wmax, float k_r, float k_a)` | GoalTracker のチューニングパラメータを変更する。 |
+| `void setGoalTuning(float vmax, float wmax, float k_r, float k_a, float reverse_threshold_deg = 90.0f, float reverse_hysteresis_deg = 10.0f)` | GoalTracker のチューニングパラメータと後退判定しきい値を変更する。 |
 
 ### GoalTracker パラメータ
 - `vmax`：直進速度の上限。初期値 70。

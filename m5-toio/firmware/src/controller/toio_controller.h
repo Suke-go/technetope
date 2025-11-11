@@ -50,7 +50,9 @@ class ToioController {
 
   void setGoal(float x, float y, float stop_distance = 20.0f);
   void clearGoal();
-  void setGoalTuning(float vmax, float wmax, float k_r, float k_a);
+  void setGoalTuning(float vmax, float wmax, float k_r, float k_a,
+                     float reverse_threshold_deg = 90.0f,
+                     float reverse_hysteresis_deg = 10.0f);
 
  private:
   std::vector<ToioCore*> scan(uint32_t duration_sec);

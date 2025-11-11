@@ -20,11 +20,15 @@ float WrapAngle(float angle_deg) {
 }
 }  // namespace
 
-void GoalTracker::setTuning(float vmax, float wmax, float k_r, float k_a) {
+void GoalTracker::setTuning(float vmax, float wmax, float k_r, float k_a,
+                            float reverse_threshold_deg,
+                            float reverse_hysteresis_deg) {
   vmax_ = vmax;
   wmax_ = wmax;
   k_r_ = k_r;
   k_a_ = k_a;
+  reverse_threshold_deg_ = reverse_threshold_deg;
+  reverse_hysteresis_deg_ = reverse_hysteresis_deg;
 }
 
 void GoalTracker::setGoal(float x, float y, float stop_distance) {
@@ -32,10 +36,12 @@ void GoalTracker::setGoal(float x, float y, float stop_distance) {
   goal_.x = x;
   goal_.y = y;
   goal_.stop_distance = stop_distance;
+  reverse_mode_ = false;
 }
 
 void GoalTracker::clearGoal() {
   goal_.active = false;
+  reverse_mode_ = false;
 }
 
 bool GoalTracker::computeCommand(const CubePose& pose, bool* left_dir,
@@ -69,9 +75,30 @@ bool GoalTracker::computeCommand(const CubePose& pose, bool* left_dir,
   const float target_heading = std::atan2(dy, dx) * kRadToDeg;
   const float heading_error =
       -WrapAngle(target_heading - static_cast<float>(pose.angle));
+  const float abs_error = std::fabs(heading_error);
 
-  float v = Clamp(k_r_ * dist, -vmax_, vmax_);
-  float w = Clamp(k_a_ * heading_error, -wmax_, wmax_);
+  const float enter_reverse =
+      reverse_threshold_deg_ + reverse_hysteresis_deg_;
+  const float exit_reverse =
+      std::max(0.0f, reverse_threshold_deg_ - reverse_hysteresis_deg_);
+
+  if (!reverse_mode_) {
+    reverse_mode_ = (abs_error > enter_reverse);
+  } else {
+    reverse_mode_ = !(abs_error < exit_reverse);
+  }
+
+  float heading_correction = heading_error;
+  float direction_scale = 1.0f;
+  if (reverse_mode_) {
+    direction_scale = -1.0f;
+    heading_correction =
+        (heading_error > 0.0f) ? heading_error - 180.0f
+                               : heading_error + 180.0f;
+  }
+
+  float v = Clamp(k_r_ * dist * direction_scale, -vmax_, vmax_);
+  float w = Clamp(k_a_ * heading_correction, -wmax_, wmax_);
 
   const float left = Clamp(v - 0.5f * w, -100.0f, 100.0f);
   const float right = Clamp(v + 0.5f * w, -100.0f, 100.0f);

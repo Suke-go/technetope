@@ -79,8 +79,10 @@ void ToioController::clearGoal() {
 }
 
 void ToioController::setGoalTuning(float vmax, float wmax, float k_r,
-                                   float k_a) {
-  goal_tracker_.setTuning(vmax, wmax, k_r, k_a);
+                                   float k_a, float reverse_threshold_deg,
+                                   float reverse_hysteresis_deg) {
+  goal_tracker_.setTuning(vmax, wmax, k_r, k_a, reverse_threshold_deg,
+                          reverse_hysteresis_deg);
 }
 
 std::vector<ToioCore*> ToioController::scan(uint32_t duration_sec) {

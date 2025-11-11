@@ -16,7 +16,7 @@ GoalTracker は Toio キューブの現在姿勢 (`CubePose`) と設定された
 | `void setGoal(float x, float y, float stop_distance = 20.0f)` | 目標座標と停止距離を登録し追従を開始する。単位は mm。 |
 | `void clearGoal()` | ゴールを解除する（`computeCommand()` は以降 false を返す）。 |
 | `bool hasGoal() const` | ゴール設定の有無を返す。 |
-| `void setTuning(float vmax, float wmax, float k_r, float k_a)` | 追従のチューニングパラメータをまとめて設定する。 |
+| `void setTuning(float vmax, float wmax, float k_r, float k_a, float reverse_threshold_deg = 90.0f, float reverse_hysteresis_deg = 10.0f)` | 追従のチューニングパラメータおよび後退判定閾値をまとめて設定する。 |
 | `bool computeCommand(const CubePose& pose, bool* leftDir, uint8_t* leftSpeed, bool* rightDir, uint8_t* rightSpeed)` | 現在姿勢から左右モータ指令を計算。指令を出した場合 true、未設定や条件未満で false。 |
 
 ### パラメータの意味と初期値
@@ -25,22 +25,33 @@ GoalTracker は Toio キューブの現在姿勢 (`CubePose`) と設定された
 - `k_r` (初期 0.5)：距離誤差→直進速度の比例ゲイン。
 - `k_a` (初期 1.2)：角度誤差→旋回速度の比例ゲイン。
 - `stop_distance` (初期 20mm)：ゴールとみなす距離閾値。
+- `reverse_threshold_deg` (初期 90度)：この角度誤差を超えたら後退モードへ移行する。
+- `reverse_hysteresis_deg` (初期 10度)：後退モードへの出入りに使うヒステリシス幅。
 
 推奨調整: まず `vmax/wmax` で全体スピード感を合わせ、次に `k_r/k_a` を微調整して振動を抑える。`stop_distance` は 10〜30mm を目安に環境に合わせて変更する。
 
 ## 4. 制御アルゴリズム
-次のような比例制御によって左右モーターの速度を決定する:
+次のような比例制御によって左右モーターの速度を決定する。角度誤差が大きい場合は後退モード（方向を 180度反転）に切り替えられる。
 
 1. `dist = hypot(goal.x - pose.x, goal.y - pose.y)`
 2. `target_heading = atan2(dy, dx)` → 度数法へ変換
 3. `heading_error = wrap_deg180(target_heading - pose.angle)`  
    - `wrap_deg180` は [-180, 180] 範囲に丸める
-4. `v = clamp(k_r * dist, -vmax, vmax)`  
-   `w = clamp(k_a * heading_error, -wmax, wmax)`
-5. 差動合成: `left = clamp(v - 0.5 * w, -100, 100)`  
+4. 後退判定  
+   - `abs_error = |heading_error|`
+   - `enter_reverse = reverse_threshold + reverse_hysteresis`
+   - `exit_reverse = max(0, reverse_threshold - reverse_hysteresis)`
+   - 進行方向が前進状態なら `abs_error > enter_reverse` で後退へ移行  
+     後退状態なら `abs_error < exit_reverse` で前進へ戻る
+   - 後退中は `heading_error` を ±180度ずらした値を用いる
+5. `v = clamp(k_r * dist * direction_scale, -vmax, vmax)`  
+   `direction_scale = 1（前進） or -1（後退）`
+6. `w = clamp(k_a * heading_correction, -wmax, wmax)`  
+   ※後退中は補正後の `heading_correction` を使用
+7. 差動合成: `left = clamp(v - 0.5 * w, -100, 100)`  
    `right = clamp(v + 0.5 * w, -100, 100)`
-6. 符号で方向を決め、絶対値をスピード値 (0..100) に変換
-7. `dist < stop_distance` の場合は左右とも 0 を返し `clearGoal()` 相当の処理を行う
+8. 符号で方向を決め、絶対値をスピード値 (0..100) に変換
+9. `dist < stop_distance` の場合は左右とも 0 を返し `clearGoal()` 相当の処理を行う
 
 `CubePose.on_mat == false` やゴール未設定の場合は指令を生成せず `false` を返す。
 
