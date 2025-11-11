@@ -15,6 +15,13 @@ struct ToioLedColor {
   uint8_t b = 0;
 };
 
+struct ToioMotorState {
+  bool left_dir = true;
+  uint8_t left_speed = 0;
+  bool right_dir = true;
+  uint8_t right_speed = 0;
+};
+
 class ToioController {
  public:
   enum class InitStatus {
@@ -44,6 +51,7 @@ class ToioController {
   void clearBatteryDirty() { battery_dirty_ = false; }
 
   ToioLedColor ledColor() const { return led_color_; }
+  ToioMotorState motorState() const { return motor_state_; }
 
   bool setLedColor(uint8_t r, uint8_t g, uint8_t b);
   bool driveMotor(bool ldir, uint8_t lspeed, bool rdir, uint8_t rspeed);
@@ -79,6 +87,7 @@ class ToioController {
   uint32_t battery_updated_ms_ = 0;
 
   ToioLedColor led_color_{};
+  ToioMotorState motor_state_{};
 
   uint32_t scan_duration_sec_ = 0;
 

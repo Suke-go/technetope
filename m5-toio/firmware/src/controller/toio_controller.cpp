@@ -66,6 +66,10 @@ bool ToioController::driveMotor(bool ldir, uint8_t lspeed, bool rdir,
     return false;
   }
   active_core_->controlMotor(ldir, lspeed, rdir, rspeed);
+  motor_state_.left_dir = ldir;
+  motor_state_.left_speed = lspeed;
+  motor_state_.right_dir = rdir;
+  motor_state_.right_speed = rspeed;
   return true;
 }
 

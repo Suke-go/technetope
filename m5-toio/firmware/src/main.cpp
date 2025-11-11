@@ -23,8 +23,9 @@ void DrawHeader(const char* message) {
   display.setTextDatum(TL_DATUM);
 }
 
-void ShowPositionData(const CubePose& pose, bool hasPose, bool hasBattery,
-                      uint8_t batteryLevel) {
+void ShowStatus(const CubePose& pose, bool hasPose, uint8_t batteryLevel,
+                bool hasBattery, const ToioLedColor& led,
+                const ToioMotorState& motor) {
   auto& display = M5.Display;
   display.fillRect(0, kStatusAreaY, display.width(),
                    display.height() - kStatusAreaY, BLACK);
@@ -48,6 +49,13 @@ void ShowPositionData(const CubePose& pose, bool hasPose, bool hasBattery,
     display.printf("Battery: %3u%%", batteryLevel);
     M5.Log.printf("battery=%u%%", batteryLevel);
   }
+  display.printf("LED RGB:(%3u,%3u,%3u)\n", led.r, led.g, led.b);
+  display.printf("Motor L:%c%3u R:%c%3u\n",
+                 motor.left_dir ? '+' : '-', motor.left_speed,
+                 motor.right_dir ? '+' : '-', motor.right_speed);
+  M5.Log.printf(" LED RGB:(%u,%u,%u) Motor L:%c%u R:%c%u", led.r, led.g,
+                led.b, motor.left_dir ? '+' : '-', motor.left_speed,
+                motor.right_dir ? '+' : '-', motor.right_speed);
   M5.Log.println();
 }
 
@@ -102,10 +110,10 @@ void PerformStartupTest() {
 }
 
 void InitGoalFollowing() {
-  float g_goalX = 350.0f;
+  float g_goalX = 300.0f;
   float g_goalY = 200.0f;
   
-  g_toio.setGoalTuning(/*vmax=*/90.0f, /*wmax=*/80.0f, /*k_r=*/1.0f,
+  g_toio.setGoalTuning(/*vmax=*/80.0f, /*wmax=*/70.0f, /*k_r=*/1.0f,
                        /*k_a=*/0.8f, /*reverse_threshold_deg=*/90.0f,
                        /*reverse_hysteresis_deg=*/10.0f);
   g_toio.setGoal(g_goalX, g_goalY, /*stop_distance=*/20.0f);
@@ -115,7 +123,7 @@ void InitGoalFollowing() {
 void setup() {
   InitializeM5Hardware();
 
-  std::string TargetFragment = "m7d";
+  std::string TargetFragment = "A3Q";
 
   ToioCore* target = nullptr;
   auto scan_status =
@@ -132,8 +140,9 @@ void setup() {
   }
 
   ShowInitResult(ToioController::InitStatus::kReady);
-  ShowPositionData(g_toio.pose(), g_toio.hasPose(), g_toio.hasBatteryLevel(),
-                   g_toio.batteryLevel());
+  ShowStatus(g_toio.pose(), g_toio.hasPose(), g_toio.batteryLevel(),
+             g_toio.hasBatteryLevel(), g_toio.ledColor(),
+             g_toio.motorState());
   g_toio.clearPoseDirty();
   g_toio.clearBatteryDirty();
   g_lastDisplay = millis();
@@ -164,8 +173,9 @@ void loop() {
                             (millis() - g_lastDisplay >= kRefreshIntervalMs);
 
   if (needs_update) {
-    ShowPositionData(g_toio.pose(), g_toio.hasPose(),
-                     g_toio.hasBatteryLevel(), g_toio.batteryLevel());
+    ShowStatus(g_toio.pose(), g_toio.hasPose(), g_toio.batteryLevel(),
+               g_toio.hasBatteryLevel(), g_toio.ledColor(),
+               g_toio.motorState());
     g_lastDisplay = millis();
   }
 
