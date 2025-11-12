@@ -2,62 +2,14 @@
 #include <string>
 
 #include "controller/toio_controller.h"
+#include "ui/ui_helpers.h"
 
 namespace {
 constexpr uint32_t kScanDurationSec = 3;
 constexpr uint32_t kRefreshIntervalMs = 1000;
-constexpr uint32_t kStatusAreaY = 40;
 
 ToioController g_toio;
-uint32_t g_lastDisplay = 0;
-
-void DrawHeader(const char* message) {
-  auto& display = M5.Display;
-  display.fillScreen(BLACK);
-  display.setTextDatum(MC_DATUM);
-  display.setTextColor(WHITE, BLACK);
-  display.setTextSize(2);
-  display.drawString("toio position monitor", display.width() / 2, 14);
-  display.setTextSize(1);
-  display.drawString(message, display.width() / 2, 30);
-  display.setTextDatum(TL_DATUM);
-}
-
-void ShowStatus(const CubePose& pose, bool hasPose, uint8_t batteryLevel,
-                bool hasBattery, const ToioLedColor& led,
-                const ToioMotorState& motor) {
-  auto& display = M5.Display;
-  display.fillRect(0, kStatusAreaY, display.width(),
-                   display.height() - kStatusAreaY, BLACK);
-  display.setCursor(6, kStatusAreaY + 4);
-
-  const uint32_t now_ms = millis();
-  display.printf("t:%08lu ms\n", static_cast<unsigned long>(now_ms));
-  M5.Log.printf("[%08lu ms][display] ", static_cast<unsigned long>(now_ms));
-
-  if (hasPose) {
-    display.printf("Cube  X:%4u  Y:%4u \n Angle:%3u, on_mat:%s\n", pose.x,
-                   pose.y, pose.angle, pose.on_mat ? "yes" : "no");
-    M5.Log.printf("x=%u y=%u angle=%u on_mat=%s ", pose.x, pose.y, pose.angle,
-                  pose.on_mat ? "yes" : "no");
-  } else {
-    display.println("No position (off mat)");
-    M5.Log.print("no position ");
-  }
-
-  if (hasBattery) {
-    display.printf("Battery: %3u%%", batteryLevel);
-    M5.Log.printf("battery=%u%%", batteryLevel);
-  }
-  display.printf("LED RGB:(%3u,%3u,%3u)\n", led.r, led.g, led.b);
-  display.printf("Motor L:%c%3u R:%c%3u\n",
-                 motor.left_dir ? '+' : '-', motor.left_speed,
-                 motor.right_dir ? '+' : '-', motor.right_speed);
-  M5.Log.printf(" LED RGB:(%u,%u,%u) Motor L:%c%u R:%c%u", led.r, led.g,
-                led.b, motor.left_dir ? '+' : '-', motor.left_speed,
-                motor.right_dir ? '+' : '-', motor.right_speed);
-  M5.Log.println();
-}
+UiHelpers g_ui;
 
 void InitializeM5Hardware() {
   auto cfg = M5.config();
@@ -67,31 +19,8 @@ void InitializeM5Hardware() {
   M5.begin(cfg);
 
   M5.Display.setRotation(3);
-  DrawHeader("Scanning...");
-}
-
-void ShowInitResult(ToioController::InitStatus status) {
-  const char* message = nullptr;
-  switch (status) {
-    case ToioController::InitStatus::kReady:
-      message = "Connected";
-      break;
-    case ToioController::InitStatus::kNoCubeFound:
-      message = "No cube found.";
-      break;
-    case ToioController::InitStatus::kTargetNotFound:
-      message = "Target cube not found.";
-      break;
-    case ToioController::InitStatus::kConnectionFailed:
-      message = "Connection failed.";
-      break;
-    case ToioController::InitStatus::kInvalidArgument:
-    default:
-      message = "Invalid request.";
-      break;
-  }
-  DrawHeader(message);
-  M5.Log.println(message);
+  g_ui.Begin();
+  g_ui.DrawHeader("Scanning...");
 }
 
 void PerformStartupTest() {
@@ -123,36 +52,39 @@ void InitGoalFollowing() {
 void setup() {
   InitializeM5Hardware();
 
-  std::string TargetFragment = "A3Q";
+  std::string TargetFragment = "m7d";
 
   ToioCore* target = nullptr;
   auto scan_status =
       g_toio.scanTargets(TargetFragment, kScanDurationSec, &target);
   if (scan_status != ToioController::InitStatus::kReady) {
-    ShowInitResult(scan_status);
+    g_ui.ShowInitResult(scan_status);
     return;
   }
 
   auto connect_status = g_toio.connectAndConfigure(target);
   if (connect_status != ToioController::InitStatus::kReady) {
-    ShowInitResult(connect_status);
+    g_ui.ShowInitResult(connect_status);
     return;
   }
 
-  ShowInitResult(ToioController::InitStatus::kReady);
-  ShowStatus(g_toio.pose(), g_toio.hasPose(), g_toio.batteryLevel(),
-             g_toio.hasBatteryLevel(), g_toio.ledColor(),
-             g_toio.motorState());
+  g_ui.ShowInitResult(ToioController::InitStatus::kReady);
+  g_ui.UpdateStatus(g_toio.pose(), g_toio.hasPose(), g_toio.batteryLevel(),
+                    g_toio.hasBatteryLevel(), g_toio.ledColor(),
+                    g_toio.motorState(),
+                    /*pose_dirty=*/true, /*battery_dirty=*/true,
+                    kRefreshIntervalMs);
   g_toio.clearPoseDirty();
   g_toio.clearBatteryDirty();
-  g_lastDisplay = millis();
 
   PerformStartupTest();
   InitGoalFollowing();
 }
 
 void loop() {
-  InitGoalFollowing(); // testing
+  // InitGoalFollowing(); // testing
+  // g_toio.driveMotor(false, 30, false, 30);
+
   M5.update();
   g_toio.loop();
 
@@ -162,21 +94,18 @@ void loop() {
   }
 
   const bool pose_dirty = g_toio.poseDirty();
+  const bool battery_dirty = g_toio.batteryDirty();
+
+  g_ui.UpdateStatus(g_toio.pose(), g_toio.hasPose(), g_toio.batteryLevel(),
+                    g_toio.hasBatteryLevel(), g_toio.ledColor(),
+                    g_toio.motorState(), pose_dirty, battery_dirty,
+                    kRefreshIntervalMs);
+
   if (pose_dirty) {
     g_toio.clearPoseDirty();
   }
-  const bool battery_dirty = g_toio.batteryDirty();
   if (battery_dirty) {
     g_toio.clearBatteryDirty();
-  }
-  const bool needs_update = pose_dirty || battery_dirty ||
-                            (millis() - g_lastDisplay >= kRefreshIntervalMs);
-
-  if (needs_update) {
-    ShowStatus(g_toio.pose(), g_toio.hasPose(), g_toio.batteryLevel(),
-               g_toio.hasBatteryLevel(), g_toio.ledColor(),
-               g_toio.motorState());
-    g_lastDisplay = millis();
   }
 
   delay(10);
